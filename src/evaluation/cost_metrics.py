@@ -335,20 +335,43 @@ def estimate_budget(
     for mid, agg in by_method.items():
         trial_cost = agg["cost_usd_sum"]
         per_ex = agg["per_example_cost_usd"]
-        est_cost = (per_ex * target_n_examples) if per_ex is not None else None
         n_ok = agg["n_ok"]
+        n_error = agg["n_error"]
+        n_records = agg["n_records"]
+
+        est_ok_cost: float | None = (
+            per_ex * target_n_examples if per_ex is not None else None
+        )
+
+        # Error cost extrapolation: average error cost per trial example × scale.
+        # n_error == 0 → known-zero error cost (no failures observed).
+        error_cost = agg["error_cost_usd_sum"]
+        if n_error == 0:
+            est_error_cost: float | None = 0.0
+        elif error_cost is not None and n_records > 0:
+            est_error_cost = (error_cost / n_records) * target_n_examples
+        else:
+            est_error_cost = None
+
+        if est_ok_cost is not None and est_error_cost is not None:
+            est_total_cost: float | None = est_ok_cost + est_error_cost
+        else:
+            est_total_cost = None
+
         calls_per_ex = agg["llm_calls"] / n_ok if n_ok > 0 else 0.0
         methods_out[mid] = {
             "trial_cost_usd": trial_cost,
             "per_example_cost_usd": per_ex,
-            "estimated_cost_usd": est_cost,
+            "estimated_ok_cost": est_ok_cost,
+            "estimated_error_cost": est_error_cost,
+            "estimated_cost_usd": est_total_cost,   # ok + error combined
             "trial_calls": agg["llm_calls"],
             "estimated_calls": round(calls_per_ex * target_n_examples),
         }
-        if est_cost is None:
+        if est_total_cost is None:
             total_est = None
         elif total_est is not None:
-            total_est += est_cost
+            total_est += est_total_cost
 
     draft_cost = draft_agg["cost_usd_sum"]
     draft_per_ex = (draft_cost / trial_n) if (draft_cost is not None and trial_n > 0) else None

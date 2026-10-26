@@ -317,6 +317,47 @@ class TestEstimateBudget:
 
 
 # ---------------------------------------------------------------------------
+# Error cost estimation in estimate_budget
+# ---------------------------------------------------------------------------
+
+class TestEstimateBudgetWithErrors:
+    def test_estimated_error_cost_extrapolated(self):
+        records = [
+            _rec("e1", "M4", usage=[_call(cost=0.002)]),
+            _rec("e2", "M4", usage=[_call(cost=0.002)]),
+            _rec("e3", "M4", status="error", usage=[_call(cost=0.001)]),
+        ]
+        result = estimate_budget(records, target_n_examples=30)
+        m4 = result["methods"]["M4"]
+        # ok: 2 records, cost=0.004, per_ok=0.002 → est_ok = 0.002*30 = 0.06
+        assert m4["estimated_ok_cost"] == pytest.approx(0.06)
+        # error: 1 error in 3 records, error_cost=0.001 → per_ex=0.001/3
+        # est_error = (0.001/3) * 30 = 0.01
+        assert m4["estimated_error_cost"] == pytest.approx(0.01)
+        assert m4["estimated_cost_usd"] == pytest.approx(0.07)
+
+    def test_no_errors_gives_zero_estimated_error_cost(self):
+        records = [_rec("e1", "M4", usage=[_call(cost=0.002)])]
+        result = estimate_budget(records, target_n_examples=10)
+        m4 = result["methods"]["M4"]
+        assert m4["estimated_error_cost"] == pytest.approx(0.0)
+        assert m4["estimated_cost_usd"] == pytest.approx(0.02)
+
+    def test_grand_total_includes_error_cost(self):
+        records = [
+            _rec("e1", "M4", usage=[_call(cost=0.002)],
+                 draft_usage=[_call(stage="generate_draft", cost=0.001)]),
+            _rec("e2", "M4", status="error", usage=[_call(cost=0.001)]),
+        ]
+        result = estimate_budget(records, target_n_examples=10)
+        # ok: n_ok=1, per_ok=0.002, est_ok=0.02
+        # error: n_records=2, error_cost=0.001, per_ex=0.0005, est_error=0.005
+        # draft: n_examples=2, draft_cost=0.001, per_ex=0.0005, est_draft=0.005
+        # total = 0.02 + 0.005 + 0.005 = 0.03
+        assert result["total_estimated_cost_usd"] == pytest.approx(0.03)
+
+
+# ---------------------------------------------------------------------------
 # Issue 2: M1 zero-call cost is 0.0, not None
 # ---------------------------------------------------------------------------
 
