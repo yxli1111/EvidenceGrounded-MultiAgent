@@ -1,0 +1,26 @@
+{
+  "_note": "Unit prices in USD per 1,000 tokens. Set realistic values before a real run. Zeros are safe placeholders for offline/mock testing.",
+  "_source": "Replace with provider pricing page values. Do NOT commit actual API keys or billing data.",
+  "models": {
+    "mock-model-v1": {
+      "input_per_1k_tokens": 0.0,
+      "output_per_1k_tokens": 0.0
+    },
+    "openai/gpt-4o": {
+      "input_per_1k_tokens": 0.005,
+      "output_per_1k_tokens": 0.015
+    },
+    "openai/gpt-4o-mini": {
+      "input_per_1k_tokens": 0.00015,
+      "output_per_1k_tokens": 0.0006
+    },
+    "anthropic/claude-3-5-sonnet": {
+      "input_per_1k_tokens": 0.003,
+      "output_per_1k_tokens": 0.015
+    },
+    "anthropic/claude-3-haiku": {
+      "input_per_1k_tokens": 0.00025,
+      "output_per_1k_tokens": 0.00125
+    }
+  }
+}
