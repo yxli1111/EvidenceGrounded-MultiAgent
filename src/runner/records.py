@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import pathlib
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
@@ -120,3 +121,45 @@ def make_error_record(
         error=error_msg,
         model_settings=model_settings,
     )
+
+
+# ---------------------------------------------------------------------------
+# Draft cache helpers
+# ---------------------------------------------------------------------------
+
+def drafts_path(output_path: str) -> str:
+    """Return the path to the drafts cache file alongside output_path."""
+    return str(pathlib.Path(output_path).parent / "drafts.jsonl")
+
+
+def load_draft_cache(path: str) -> dict[str, dict]:
+    """Load draft cache from a JSONL file; returns empty dict if file missing."""
+    cache: dict[str, dict] = {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    d = json.loads(line)
+                    cache[d["example_id"]] = d
+    except FileNotFoundError:
+        pass
+    return cache
+
+
+def save_draft(
+    path: str,
+    example_id: str,
+    draft_dict: dict,
+    draft_usage: list[dict],
+) -> None:
+    """Append one draft entry to the drafts cache JSONL file."""
+    record = {
+        "example_id": example_id,
+        "draft_id": draft_dict["draft_id"],
+        "short_answer": draft_dict["short_answer"],
+        "explanation": draft_dict["explanation"],
+        "draft_usage": draft_usage,
+    }
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")

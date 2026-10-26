@@ -110,11 +110,73 @@ class TestTokenF1:
         assert token_f1("Paris", "") == pytest.approx(0.0)
 
     def test_duplicate_tokens(self):
-        # "yes yes" vs "yes": common Counter intersection = {"yes":1}
-        # pred_tokens=["yes","yes"] gold_tokens=["yes"]
+        # "paris paris" vs "paris": Counter intersection = {"paris":1}
+        # pred_tokens=["paris","paris"] gold_tokens=["paris"]
         # precision=1/2, recall=1/1, f1=2/3
-        f1 = token_f1("yes yes", "yes")
+        f1 = token_f1("paris paris", "paris")
         assert f1 == pytest.approx(2 / 3, abs=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# HotpotQA yes/no/noanswer special case (Issue 5)
+# ---------------------------------------------------------------------------
+
+class TestYesNoSpecialCase:
+    def test_yes_yes_f1_is_one(self):
+        assert token_f1("yes", "yes") == pytest.approx(1.0)
+
+    def test_yes_no_f1_is_zero(self):
+        assert token_f1("yes", "no") == pytest.approx(0.0)
+
+    def test_no_yes_f1_is_zero(self):
+        assert token_f1("no", "yes") == pytest.approx(0.0)
+
+    def test_noanswer_noanswer_f1_is_one(self):
+        assert token_f1("noanswer", "noanswer") == pytest.approx(1.0)
+
+    def test_gold_yes_pred_other_gets_zero_not_partial(self):
+        # Without the special case: token_f1("yes please", "yes")
+        # pred=["yes","please"], gold=["yes"] → precision=1/2, recall=1, f1=2/3
+        # With special case: gold="yes" ∈ {yes,no,noanswer} → 0.0 (no exact match)
+        assert token_f1("yes please", "yes") == pytest.approx(0.0)
+
+    def test_gold_no_pred_mixed_gets_zero(self):
+        # Without special case: token_f1("yes no", "no")
+        # pred=["yes","no"], gold=["no"] → precision=1/2, recall=1, f1=2/3
+        # With special case: 0.0
+        assert token_f1("yes no", "no") == pytest.approx(0.0)
+
+    def test_yes_no_em_still_zero(self):
+        assert exact_match("yes", "no") == pytest.approx(0.0)
+
+    def test_yes_yes_em_is_one(self):
+        assert exact_match("yes", "yes") == pytest.approx(1.0)
+
+
+# ---------------------------------------------------------------------------
+# None final_answer handling (Issue 5)
+# ---------------------------------------------------------------------------
+
+class TestNoneFinalAnswer:
+    def test_none_prediction_exact_match_is_zero(self):
+        assert exact_match(None, "Paris") == pytest.approx(0.0)
+
+    def test_none_gold_exact_match_is_zero(self):
+        assert exact_match("Paris", None) == pytest.approx(0.0)
+
+    def test_none_both_exact_match_is_one(self):
+        # Both None → both normalize to "" → equal
+        assert exact_match(None, None) == pytest.approx(1.0)
+
+    def test_none_prediction_f1_is_zero(self):
+        assert token_f1(None, "Paris") == pytest.approx(0.0)
+
+    def test_compute_batch_none_final_answer_no_crash(self):
+        records = [{"example_id": "e1", "method_id": "M1",
+                    "status": "ok", "final_answer": None}]
+        gold = {"e1": {"gold_answer": "Paris"}}
+        result = compute_em_f1_batch(records, gold)
+        assert result["M1"]["em"] == pytest.approx(0.0)
 
 
 # ---------------------------------------------------------------------------

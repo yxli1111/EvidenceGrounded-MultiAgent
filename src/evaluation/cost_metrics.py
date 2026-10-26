@@ -91,7 +91,11 @@ def _accumulate(
     calls: list[dict],
     pricing: dict[str, dict],
 ) -> None:
-    """Add one list of call dicts into accumulator in-place."""
+    """Add one list of call dicts into accumulator in-place.
+
+    cache_hit=True calls are counted in cache_hits and cached_cost_sum but
+    are NOT added to cost_usd_sum (cache replays are not paid inference).
+    """
     for call in calls:
         acc["llm_calls"] += 1
 
@@ -110,16 +114,22 @@ def _accumulate(
         # Use recorded cost if available; otherwise re-compute from tokens.
         if cost is None and pricing:
             cost = compute_cost_from_tokens(in_tok, out_tok, model, pricing)
-        if cost is not None:
-            acc["cost_usd_sum"] = (acc["cost_usd_sum"] or 0.0) + cost
-            acc["n_calls_with_cost"] += 1
+
+        if cache is True:
+            acc["cache_hits"] += 1
+            # Cache replay: track separately, not as paid cost
+            if cost is not None:
+                acc["_cached_cost_sum"] = (acc["_cached_cost_sum"] or 0.0) + cost
+                acc["n_cache_hits_with_cost"] += 1
+        else:
+            acc["_n_paid_calls"] += 1
+            if cost is not None:
+                acc["cost_usd_sum"] = (acc["cost_usd_sum"] or 0.0) + cost
+                acc["n_calls_with_cost"] += 1
 
         if lat is not None:
             acc["_latency_sum"] += lat
             acc["n_calls_with_latency"] += 1
-
-        if cache is True:
-            acc["cache_hits"] += 1
 
 
 def _blank_acc() -> dict:
@@ -128,13 +138,18 @@ def _blank_acc() -> dict:
         "n_ok": 0,
         "n_error": 0,
         "llm_calls": 0,
+        "_n_paid_calls": 0,           # non-cached calls
         "input_tokens_sum": None,
         "output_tokens_sum": None,
-        "cost_usd_sum": None,
-        "n_calls_with_cost": 0,
+        "cost_usd_sum": None,         # paid (non-cached) cost only
+        "n_calls_with_cost": 0,       # non-cached calls with cost data
+        "_cached_cost_sum": None,
+        "n_cache_hits_with_cost": 0,
         "_latency_sum": 0.0,
         "n_calls_with_latency": 0,
         "cache_hits": 0,
+        "_error_cost_sum": None,      # cost from error records' usage
+        "_error_calls": 0,
     }
 
 
@@ -144,9 +159,15 @@ def _finalise(acc: dict, method_id: str) -> dict:
         acc["_latency_sum"] / acc["n_calls_with_latency"]
         if acc["n_calls_with_latency"] > 0 else None
     )
+    # If n_ok > 0 and no paid calls at all (either 0 LLM calls or all were
+    # cache hits), the paid cost is known to be 0.0, not unknown (None).
+    cost_usd_sum = acc["cost_usd_sum"]
+    if n_ok > 0 and acc["_n_paid_calls"] == 0 and cost_usd_sum is None:
+        cost_usd_sum = 0.0
+
     per_ex = (
-        acc["cost_usd_sum"] / n_ok
-        if n_ok > 0 and acc["cost_usd_sum"] is not None else None
+        cost_usd_sum / n_ok
+        if n_ok > 0 and cost_usd_sum is not None else None
     )
     return {
         "method_id": method_id,
@@ -156,8 +177,11 @@ def _finalise(acc: dict, method_id: str) -> dict:
         "llm_calls": acc["llm_calls"],
         "input_tokens_sum": acc["input_tokens_sum"],
         "output_tokens_sum": acc["output_tokens_sum"],
-        "cost_usd_sum": acc["cost_usd_sum"],
+        "cost_usd_sum": cost_usd_sum,
         "n_calls_with_cost": acc["n_calls_with_cost"],
+        "cached_cost_sum": acc["_cached_cost_sum"],
+        "n_cache_hits_with_cost": acc["n_cache_hits_with_cost"],
+        "error_cost_usd_sum": acc["_error_cost_sum"],
         "mean_latency_ms": mean_lat,
         "n_calls_with_latency": acc["n_calls_with_latency"],
         "cache_hits": acc["cache_hits"],
@@ -200,6 +224,17 @@ def aggregate_usage_by_method(
         status = _get(rec, "status") or "error"
         if status != "ok":
             acc["n_error"] += 1
+            # Accumulate error record's usage into separate error cost bucket
+            for call in (_get(rec, "usage") or []):
+                acc["_error_calls"] += 1
+                cost = call.get("cost_usd")
+                if cost is None and pricing:
+                    cost = compute_cost_from_tokens(
+                        call.get("input_tokens"), call.get("output_tokens"),
+                        call.get("model", ""), pricing,
+                    )
+                if cost is not None:
+                    acc["_error_cost_sum"] = (acc["_error_cost_sum"] or 0.0) + cost
             continue
 
         acc["n_ok"] += 1

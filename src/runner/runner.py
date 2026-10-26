@@ -34,8 +34,11 @@ from typing import Any
 from .records import (
     ExperimentRecord,
     append_record,
+    drafts_path,
     load_completed,
+    load_draft_cache,
     make_error_record,
+    save_draft,
 )
 
 _METHOD_IDS = ["M1", "M2", "M3", "M4", "M5"]
@@ -188,26 +191,57 @@ class ExperimentRunner:
             List of newly created ExperimentRecords (does not include pre-existing ones).
         """
         completed = load_completed(output_path)
+        dpath = drafts_path(output_path)
+        draft_cache = load_draft_cache(dpath)
         new_records: list[ExperimentRecord] = []
+
+        prompt_versions = {
+            "draft_port": getattr(self.draft_port, "prompt_version", None),
+            "retrieve_port": getattr(self.retrieve_port, "prompt_version", None),
+            "claims_port": getattr(self.claims_port, "prompt_version", None),
+            "verification_port": getattr(self.verification_port, "prompt_version", None),
+        }
 
         for example in examples:
             eid = _attr(example, "example_id")
             question = _attr(example, "question", "")
 
-            # Generate one shared draft for all five methods.
-            try:
-                draft = self.draft_port.generate_draft(example, self.llm)
-                draft_usage = self._drain_usage()
-            except Exception as exc:
-                draft_usage = self._drain_usage()
-                for mid in _METHOD_IDS:
-                    if (eid, mid) in completed:
-                        continue
-                    rec = make_error_record(eid, mid, str(exc), question, model_settings)
-                    rec.draft_usage = draft_usage
-                    append_record(output_path, rec)
-                    new_records.append(rec)
+            # Skip the whole example if all 5 methods are already complete.
+            if all((eid, mid) in completed for mid in _METHOD_IDS):
                 continue
+
+            # Get draft from cache or generate a new one.
+            if eid in draft_cache:
+                cached = draft_cache[eid]
+                draft: Any = {
+                    "draft_id": cached["draft_id"],
+                    "short_answer": cached["short_answer"],
+                    "explanation": cached["explanation"],
+                }
+                draft_usage: list[dict] = cached["draft_usage"]
+            else:
+                try:
+                    draft = self.draft_port.generate_draft(example, self.llm)
+                    draft_usage = self._drain_usage()
+                except Exception as exc:
+                    draft_usage = self._drain_usage()
+                    for mid in _METHOD_IDS:
+                        if (eid, mid) in completed:
+                            continue
+                        rec = make_error_record(eid, mid, str(exc), question, model_settings)
+                        rec.draft_usage = draft_usage
+                        rec.prompt_versions = prompt_versions
+                        append_record(output_path, rec)
+                        new_records.append(rec)
+                    continue
+
+                dd = _ser_draft(draft)
+                save_draft(dpath, eid, dd, draft_usage)
+                draft_cache[eid] = {
+                    "example_id": eid,
+                    **dd,
+                    "draft_usage": draft_usage,
+                }
 
             for mid in _METHOD_IDS:
                 if (eid, mid) in completed:
@@ -216,10 +250,12 @@ class ExperimentRunner:
                     method_fn = getattr(self, f"_run_{mid.lower()}")
                     rec = method_fn(example, draft, model_settings)
                 except Exception as exc:
-                    self._drain_usage()  # discard partial usage on error
+                    partial_usage = self._drain_usage()
                     rec = make_error_record(eid, mid, str(exc), question, model_settings)
+                    rec.usage = partial_usage
 
                 rec.draft_usage = list(draft_usage)
+                rec.prompt_versions = prompt_versions
                 append_record(output_path, rec)
                 new_records.append(rec)
 

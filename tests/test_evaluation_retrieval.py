@@ -186,13 +186,30 @@ class TestMeanRecallAtK:
     def test_denominator_label_preserved(self):
         records = self._records([{"eid": "e1", "mid": "M4", "evidence": []}])
         gold = self._gold({"e1": []})
+        # QUESTION_CONDITIONED is valid; CLAIM_CONDITIONED now raises (see below)
         result = mean_recall_at_k(
             records, gold, k=5, method_id="M4",
-            denominator=RecallDenominator.CLAIM_CONDITIONED
+            denominator=RecallDenominator.QUESTION_CONDITIONED
         )
-        assert result["denominator"] == "claim_conditioned"
+        assert result["denominator"] == "question_conditioned"
 
     def test_empty_records(self):
         result = mean_recall_at_k([], {}, k=5, method_id="M4")
         assert result["mean_recall"] == pytest.approx(0.0)
         assert result["n"] == 0
+
+
+# ---------------------------------------------------------------------------
+# CLAIM_CONDITIONED raises NotImplementedError (Issue 6)
+# ---------------------------------------------------------------------------
+
+class TestClaimConditionedNotImplemented:
+    def test_mean_recall_raises_for_claim_conditioned(self):
+        records = [{"example_id": "e1", "method_id": "M4",
+                    "status": "ok", "evidence": []}]
+        gold = {"e1": {"gold_supporting_facts": []}}
+        with pytest.raises(NotImplementedError, match="claim.*gold|GAP-7"):
+            mean_recall_at_k(
+                records, gold, k=5, method_id="M4",
+                denominator=RecallDenominator.CLAIM_CONDITIONED
+            )

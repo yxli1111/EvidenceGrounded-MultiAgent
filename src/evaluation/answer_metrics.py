@@ -2,14 +2,23 @@
 
 Normalization follows the original HotpotQA / SQuAD evaluation script:
 lowercase -> strip punctuation -> remove articles -> collapse whitespace.
+
+Special case (hotpot_evaluate_v1.py): when either the prediction or the gold
+answer is one of {'yes', 'no', 'noanswer'}, token-level F1 is not computed;
+the score is 1.0 iff the strings match exactly after normalization, else 0.0.
+None inputs are treated as empty strings.
 """
 
 import re
 import string
 from collections import Counter
 
+_YES_NO_SPECIAL = {"yes", "no", "noanswer"}
 
-def normalize_answer(s: str) -> str:
+
+def normalize_answer(s: str | None) -> str:
+    if s is None:
+        return ""
     s = s.lower()
     s = s.translate(str.maketrans("", "", string.punctuation))
     s = re.sub(r"\b(a|an|the)\b", " ", s)
@@ -17,19 +26,30 @@ def normalize_answer(s: str) -> str:
     return s
 
 
-def _get_tokens(s: str) -> list[str]:
+def _get_tokens(s: str | None) -> list[str]:
     return normalize_answer(s).split()
 
 
-def exact_match(prediction: str, gold: str) -> float:
+def exact_match(prediction: str | None, gold: str | None) -> float:
     """Return 1.0 if normalized strings are identical, else 0.0."""
     return float(normalize_answer(prediction) == normalize_answer(gold))
 
 
-def token_f1(prediction: str, gold: str) -> float:
-    """Token-level F1 over normalized whitespace-split tokens."""
-    pred_tokens = _get_tokens(prediction)
-    gold_tokens = _get_tokens(gold)
+def token_f1(prediction: str | None, gold: str | None) -> float:
+    """Token-level F1 over normalized whitespace-split tokens.
+
+    Follows hotpot_evaluate_v1.py: if either normalized answer is one of
+    {yes, no, noanswer}, skip token comparison and return exact match instead.
+    """
+    pred_norm = normalize_answer(prediction)
+    gold_norm = normalize_answer(gold)
+
+    # HotpotQA yes/no/noanswer special case
+    if pred_norm in _YES_NO_SPECIAL or gold_norm in _YES_NO_SPECIAL:
+        return 1.0 if pred_norm == gold_norm else 0.0
+
+    pred_tokens = pred_norm.split() if pred_norm else []
+    gold_tokens = gold_norm.split() if gold_norm else []
 
     if not gold_tokens and not pred_tokens:
         return 1.0
@@ -82,9 +102,9 @@ def compute_em_f1_batch(
 
         bucket["n_ok"] += 1
         gold = gold_lookup.get(eid, {}).get("gold_answer", "")
-        pred = rec.get("final_answer", "")
+        pred = rec.get("final_answer") or ""
         bucket["em_sum"] += exact_match(pred, gold)
-        bucket["f1_sum"] += token_f1(pred, gold)
+        bucket["f1_sum"] += token_f1(pred, gold)  # pred already "" if None
 
     result = {}
     for mid, b in buckets.items():

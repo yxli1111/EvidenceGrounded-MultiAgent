@@ -98,6 +98,10 @@ def compare_methods(
 ) -> dict:
     """Run paired_bootstrap_ci on records from two named methods.
 
+    Failed records (status != "ok") are included with score 0.0.
+    Missing records for one method on a given example also score 0.0.
+    An example is excluded only if NEITHER method has any record for it.
+
     Args:
         records: list of ExperimentRecord dicts (or objects with .example_id etc).
         gold_lookup: maps example_id → {"gold_answer": str, ...}.
@@ -108,48 +112,59 @@ def compare_methods(
 
     Returns:
         paired_bootstrap_ci result dict with extra keys "method_a", "method_b",
-        "metric", "mean_a", "mean_b".
+        "metric", "mean_a", "mean_b", "n_failed_a", "n_failed_b".
     """
-    from .answer_metrics import exact_match, token_f1, normalize_answer
+    from .answer_metrics import exact_match, token_f1
 
     def _get(obj, key):
         return obj[key] if isinstance(obj, dict) else getattr(obj, key, None)
 
-    def _score(rec) -> float | None:
-        status = _get(rec, "status") or "error"
-        if status != "ok":
-            return None
+    def _score_ok(rec) -> float:
+        """Compute score for an ok record; returns 0.0 if gold missing."""
         eid = _get(rec, "example_id") or ""
         gold_entry = gold_lookup.get(eid)
         if not gold_entry:
-            return None
+            return 0.0
         gold = gold_entry.get("gold_answer", "")
         pred = _get(rec, "final_answer") or ""
         if metric == "f1":
             return token_f1(pred, gold)
         return exact_match(pred, gold)
 
-    a_scores: dict[str, float] = {}
-    b_scores: dict[str, float] = {}
+    # Gather per-example scores (or None if no record exists for that method)
+    a_records: dict[str, tuple[float, bool]] = {}  # eid → (score, is_failed)
+    b_records: dict[str, tuple[float, bool]] = {}
     for rec in records:
         mid = _get(rec, "method_id") or ""
         eid = _get(rec, "example_id") or ""
-        s = _score(rec)
-        if s is None:
-            continue
+        status = _get(rec, "status") or "error"
+        is_failed = (status != "ok")
+        score = 0.0 if is_failed else _score_ok(rec)
         if mid == method_a:
-            a_scores[eid] = s
+            a_records[eid] = (score, is_failed)
         elif mid == method_b:
-            b_scores[eid] = s
+            b_records[eid] = (score, is_failed)
 
-    common = sorted(a_scores.keys() & b_scores.keys())
-    if not common:
+    # Include every example that appears in at least one method's records
+    all_eids = sorted(a_records.keys() | b_records.keys())
+    if not all_eids:
         raise ValueError(
             f"No paired examples found for methods '{method_a}' and '{method_b}'"
         )
 
-    a_vec = [a_scores[eid] for eid in common]
-    b_vec = [b_scores[eid] for eid in common]
+    a_vec: list[float] = []
+    b_vec: list[float] = []
+    n_failed_a = 0
+    n_failed_b = 0
+    for eid in all_eids:
+        a_score, a_fail = a_records.get(eid, (0.0, True))
+        b_score, b_fail = b_records.get(eid, (0.0, True))
+        a_vec.append(a_score)
+        b_vec.append(b_score)
+        if a_fail:
+            n_failed_a += 1
+        if b_fail:
+            n_failed_b += 1
 
     result = paired_bootstrap_ci(a_vec, b_vec, **bootstrap_kwargs)
     result["method_a"] = method_a
@@ -157,4 +172,6 @@ def compare_methods(
     result["metric"] = metric
     result["mean_a"] = sum(a_vec) / len(a_vec)
     result["mean_b"] = sum(b_vec) / len(b_vec)
+    result["n_failed_a"] = n_failed_a
+    result["n_failed_b"] = n_failed_b
     return result

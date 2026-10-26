@@ -65,6 +65,21 @@ output file already exists, completed pairs are skipped (idempotent resume).
 
 ---
 
+## Cache hit cost (Contributor C must confirm)
+
+`cost_metrics.py` separates `cached_cost_sum` from `cost_usd_sum` so that
+`per_example_cost_usd` and budget estimates reflect only **paid inference**.
+This separation relies on C's LLM client marking cache replays with
+`cache_hit=True` in the usage dict.
+
+Per the OpenRouter contract, cache replays are not billed as new inference —
+only the first call that populates the cache is charged.  If C's client marks
+cache hits correctly, cost analysis will be accurate automatically.  If
+`cache_hit` is absent or always `None`, all calls are counted as paid (the
+safe over-estimate).
+
+---
+
 ## LLMClient interface (Contributor C must confirm)
 
 `ExperimentRunner` calls `llm.generate(stage, messages, model, temperature,

@@ -100,12 +100,25 @@ def mean_recall_at_k(
         gold_lookup: maps example_id -> QAGold dict.
         k: rank cutoff.
         method_id: only records with this method_id are processed.
-        denominator: passed through to recall_at_k.
+        denominator: must be QUESTION_CONDITIONED.
+                     CLAIM_CONDITIONED raises NotImplementedError because
+                     M5 evidence is a merge of per-claim retrievals;
+                     computing claim-conditioned Recall@k requires a
+                     claim→gold supporting-facts mapping that is not yet
+                     available (see GAP-7 in evaluation/E_CONTRACT_PROPOSAL.md).
 
     Returns:
         {"mean_recall": float, "n": int, "n_ok": int, "n_error": int,
          "denominator": str, "k": int}
     """
+    if denominator == RecallDenominator.CLAIM_CONDITIONED:
+        raise NotImplementedError(
+            "CLAIM_CONDITIONED requires a per-example claim→gold supporting-facts "
+            "mapping. M5 evidence is a merge of per-claim retrievals and must NOT "
+            "be compared directly against question-level gold facts. "
+            "See GAP-7 in evaluation/E_CONTRACT_PROPOSAL.md."
+        )
+
     subset = [r for r in records if r.get("method_id") == method_id]
     total = len(subset)
     n_ok = 0

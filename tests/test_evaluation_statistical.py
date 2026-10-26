@@ -146,18 +146,9 @@ class TestCompareMethods:
         assert result["method_b"] == "M5"
         assert result["metric"] == "em"
 
-    def test_error_records_excluded(self):
-        records = RECORDS_EM + [
-            _make_record("e4", "M4", "Zurich", status="error"),
-            _make_record("e4", "M5", "Zurich", status="error"),
-        ]
-        result = compare_methods(records, GOLD, "M4", "M5",
-                                 n_resamples=100, seed=0)
-        # e4 error and gold missing in GOLD → excluded; n should still be 3
-        assert result["n"] == 3
-
     def test_no_paired_examples_raises(self):
-        records = [_make_record("e1", "M4", "Paris")]
+        # Neither M4 nor M5 has any records → truly no examples to compare
+        records = [_make_record("e1", "M3", "Paris")]
         with pytest.raises(ValueError, match="No paired"):
             compare_methods(records, GOLD, "M4", "M5", n_resamples=50, seed=0)
 
@@ -167,3 +158,76 @@ class TestCompareMethods:
         assert result["metric"] == "f1"
         assert 0.0 <= result["mean_a"] <= 1.0
         assert 0.0 <= result["mean_b"] <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# Issue 3: failed records count as 0; n_failed_a/b reported
+# ---------------------------------------------------------------------------
+
+class TestCompareMethodsFailedRecords:
+    def test_error_record_counted_as_zero_not_dropped(self):
+        # M5 has error for e3 → must be included with score 0.0, not dropped
+        # RECORDS_EM: M4 e3=wrong(0), M5 e3=Rome(1).
+        # Add M5 error for e3 to override:
+        records = [
+            _make_record("e1", "M4", "Paris"),
+            _make_record("e2", "M4", "Berlin"),
+            _make_record("e3", "M4", "wrong"),
+            _make_record("e1", "M5", "Paris"),
+            _make_record("e2", "M5", "Berlin"),
+            _make_record("e3", "M5", "Rome", status="error"),
+        ]
+        result = compare_methods(records, GOLD, "M4", "M5",
+                                 metric="em", n_resamples=200, seed=0)
+        # n must be 3 (e3 included despite M5 error)
+        assert result["n"] == 3
+        # M5 scores: e1=1, e2=1, e3=0 (error) → mean_b = 2/3
+        assert result["mean_b"] == pytest.approx(2 / 3, abs=1e-9)
+
+    def test_missing_method_b_record_counts_as_zero(self):
+        # M5 has NO record for e3 → e3 should be included with M5 score=0
+        records = [
+            _make_record("e1", "M4", "Paris"),
+            _make_record("e2", "M4", "Berlin"),
+            _make_record("e3", "M4", "wrong"),
+            _make_record("e1", "M5", "Paris"),
+            _make_record("e2", "M5", "Berlin"),
+            # no M5 record for e3
+        ]
+        result = compare_methods(records, GOLD, "M4", "M5",
+                                 metric="em", n_resamples=200, seed=0)
+        assert result["n"] == 3, "e3 must be included even though M5 has no record"
+        # M5: e1=1, e2=1, e3=0 (missing) → mean_b = 2/3
+        assert result["mean_b"] == pytest.approx(2 / 3, abs=1e-9)
+
+    def test_n_failed_a_and_n_failed_b_in_result(self):
+        result = compare_methods(RECORDS_EM, GOLD, "M4", "M5",
+                                 n_resamples=100, seed=0)
+        assert "n_failed_a" in result, "n_failed_a must be in result"
+        assert "n_failed_b" in result, "n_failed_b must be in result"
+
+    def test_n_failed_b_counts_error_records(self):
+        records = [
+            _make_record("e1", "M4", "Paris"),
+            _make_record("e2", "M4", "Berlin"),
+            _make_record("e3", "M4", "wrong"),
+            _make_record("e1", "M5", "Paris"),
+            _make_record("e2", "M5", "Rome", status="error"),
+            _make_record("e3", "M5", "Rome", status="error"),
+        ]
+        result = compare_methods(records, GOLD, "M4", "M5",
+                                 n_resamples=100, seed=0)
+        assert result["n_failed_b"] == 2
+
+    def test_excludes_only_example_missing_from_both(self):
+        # e1 in M4 only, e2 in M5 only, e3 in both
+        records = [
+            _make_record("e1", "M4", "Paris"),
+            _make_record("e2", "M5", "Berlin"),
+            _make_record("e3", "M4", "wrong"),
+            _make_record("e3", "M5", "Rome"),
+        ]
+        result = compare_methods(records, GOLD, "M4", "M5",
+                                 n_resamples=100, seed=0)
+        # All three examples appear in at least one method → n=3
+        assert result["n"] == 3

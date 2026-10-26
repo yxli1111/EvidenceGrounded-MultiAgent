@@ -72,14 +72,10 @@ def three_examples():
 
 
 @pytest.fixture()
-def output_file():
-    with tempfile.NamedTemporaryFile(
-        suffix=".jsonl", mode="w", delete=False, encoding="utf-8"
-    ) as f:
-        path = f.name
+def output_file(tmp_path):
+    path = str(tmp_path / "out.jsonl")
     yield path
-    if os.path.exists(path):
-        os.remove(path)
+    # tmp_path is cleaned up automatically by pytest
 
 
 # ---------------------------------------------------------------------------
@@ -363,3 +359,62 @@ class TestUsageTracking:
                 assert required.issubset(entry.keys()), (
                     f"Usage entry missing keys: {required - entry.keys()}"
                 )
+
+
+# ---------------------------------------------------------------------------
+# Issue 4: error records preserve partial usage
+# ---------------------------------------------------------------------------
+
+class TestErrorRecordPreservesUsage:
+    def test_error_record_usage_not_empty_when_llm_called_before_error(
+        self, ports, output_file
+    ):
+        example = make_synthetic_example("e_erruse")
+
+        class BrokenAfterLLMCall(MockDraftPort):
+            def self_reflect(self, example, draft, llm):
+                # Call LLM first, then raise
+                llm.generate("self_reflect", [], getattr(llm, "model", "mock"), 0.0, 512)
+                raise RuntimeError("M2 fails after LLM call")
+
+        ports["draft_port"] = BrokenAfterLLMCall()
+        runner = ExperimentRunner(**ports, top_k=3)
+        runner.run([example], output_file)
+
+        records = {r.method_id: r for r in load_records(output_file)}
+        m2 = records["M2"]
+        assert m2.status == "error"
+        assert len(m2.usage) >= 1, (
+            "Error record must preserve LLM usage accumulated before the failure"
+        )
+        stages = [u["stage"] for u in m2.usage]
+        assert "self_reflect" in stages
+
+
+# ---------------------------------------------------------------------------
+# Issue 7: prompt_versions collected from port attributes
+# ---------------------------------------------------------------------------
+
+class TestPromptVersions:
+    def test_prompt_version_stored_when_port_has_attribute(
+        self, ports, output_file
+    ):
+        ports["draft_port"].prompt_version = "v1.2"
+        runner = ExperimentRunner(**ports, top_k=3)
+        runner.run([make_synthetic_example("e_pv")], output_file)
+        records = load_records(output_file)
+        for rec in records:
+            assert rec.prompt_versions is not None, "prompt_versions must not be None"
+            assert rec.prompt_versions.get("draft_port") == "v1.2", (
+                f"Expected 'v1.2', got {rec.prompt_versions}"
+            )
+
+    def test_prompt_version_none_when_port_lacks_attribute(
+        self, ports, output_file
+    ):
+        runner = ExperimentRunner(**ports, top_k=3)
+        runner.run([make_synthetic_example("e_pv2")], output_file)
+        records = load_records(output_file)
+        for rec in records:
+            assert rec.prompt_versions is not None, "prompt_versions must be a dict"
+            assert rec.prompt_versions.get("draft_port") is None

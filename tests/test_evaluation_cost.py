@@ -143,7 +143,8 @@ class TestAggregateUsageByMethod:
         ]
         result = aggregate_usage_by_method(records)
         assert result["M1"]["llm_calls"] == 0
-        assert result["M1"]["cost_usd_sum"] is None
+        # M1 has ok records + zero calls → cost is 0.0 (known, not None)
+        assert result["M1"]["cost_usd_sum"] == pytest.approx(0.0)
         assert result["M5"]["cost_usd_sum"] == pytest.approx(0.005)
 
     def test_none_cost_excluded_from_sum(self):
@@ -180,7 +181,8 @@ class TestAggregateUsageByMethod:
                  draft_usage=[_call(cost=0.0001)]),
         ]
         result = aggregate_usage_by_method(records, include_draft_usage=False)
-        assert result["M1"]["cost_usd_sum"] is None
+        # M1 has ok record + zero method calls → cost is 0.0, not the draft cost
+        assert result["M1"]["cost_usd_sum"] == pytest.approx(0.0)
 
     def test_draft_usage_included_when_flag_set(self):
         records = [
@@ -263,9 +265,9 @@ class TestEstimateBudget:
         result = estimate_budget(self._trial(), target_n_examples=50)
         m1 = result["methods"]["M1"]
         assert m1["trial_calls"] == 0
-        # cost_usd_sum is None (no calls), so per_example and estimated are None
-        assert m1["per_example_cost_usd"] is None
-        assert m1["estimated_cost_usd"] is None
+        # M1 has ok records + zero calls → cost is 0.0 (known, not None)
+        assert m1["per_example_cost_usd"] == pytest.approx(0.0)
+        assert m1["estimated_cost_usd"] == pytest.approx(0.0)
 
     def test_draft_cost_estimated_separately(self):
         result = estimate_budget(self._trial(), target_n_examples=10)
@@ -274,10 +276,19 @@ class TestEstimateBudget:
         assert draft["per_example_cost_usd"] == pytest.approx(0.0005)
         assert draft["estimated_cost_usd"] == pytest.approx(0.005)
 
-    def test_total_is_none_when_any_cost_is_none(self):
-        # M1 has no method calls → None cost → total must be None
-        result = estimate_budget(self._trial(), target_n_examples=100)
+    def test_total_is_none_when_calls_exist_but_no_pricing(self):
+        # Records where calls have cost=None AND no pricing provided → total is None
+        records = [
+            _rec("e1", "M4", usage=[_call(cost=None)]),
+            _rec("e2", "M4", usage=[_call(cost=None)]),
+        ]
+        result = estimate_budget(records, target_n_examples=100)
         assert result["total_estimated_cost_usd"] is None
+
+    def test_total_not_none_when_m1_has_zero_calls(self):
+        # M1 has ok records + zero calls → 0.0 cost; total must not be None
+        result = estimate_budget(self._trial(), target_n_examples=100)
+        assert result["total_estimated_cost_usd"] is not None
 
     def test_total_sums_when_all_costs_known(self):
         # Only M4 records, one call each, cost=0.001
@@ -303,3 +314,119 @@ class TestEstimateBudget:
         result = estimate_budget([], target_n_examples=100)
         assert result["trial_n_examples"] == 0
         assert result["total_estimated_cost_usd"] is None
+
+
+# ---------------------------------------------------------------------------
+# Issue 2: M1 zero-call cost is 0.0, not None
+# ---------------------------------------------------------------------------
+
+class TestZeroCallCost:
+    def test_ok_records_zero_calls_gives_zero_cost(self):
+        records = [
+            _rec("e1", "M1", usage=[]),
+            _rec("e2", "M1", usage=[]),
+        ]
+        result = aggregate_usage_by_method(records)
+        m1 = result["M1"]
+        assert m1["n_ok"] == 2
+        assert m1["llm_calls"] == 0
+        assert m1["cost_usd_sum"] == pytest.approx(0.0), (
+            "Method with ok records and zero calls should have cost 0.0, not None"
+        )
+
+    def test_per_example_cost_zero_when_no_calls(self):
+        records = [_rec("e1", "M1", usage=[])]
+        result = aggregate_usage_by_method(records)
+        assert result["M1"]["per_example_cost_usd"] == pytest.approx(0.0)
+
+    def test_only_error_records_still_none(self):
+        records = [_rec("e1", "M1", status="error", usage=[])]
+        result = aggregate_usage_by_method(records)
+        # No ok records → cost unknown → None
+        assert result["M1"]["cost_usd_sum"] is None
+
+
+# ---------------------------------------------------------------------------
+# Issue 4: error records preserve usage; cost tracked separately
+# ---------------------------------------------------------------------------
+
+class TestErrorCostTracking:
+    def test_error_cost_usd_sum_in_output(self):
+        records = [_rec("e1", "M4", status="error",
+                        usage=[_call(cost=0.005)])]
+        result = aggregate_usage_by_method(records)
+        assert "error_cost_usd_sum" in result["M4"], (
+            "error_cost_usd_sum key must be present in output"
+        )
+
+    def test_error_record_cost_tracked_separately(self):
+        records = [
+            _rec("e1", "M4", usage=[_call(cost=0.001)]),
+            _rec("e2", "M4", status="error", usage=[_call(cost=0.005)]),
+        ]
+        result = aggregate_usage_by_method(records)
+        m4 = result["M4"]
+        assert m4["cost_usd_sum"] == pytest.approx(0.001), "ok cost only"
+        assert m4["error_cost_usd_sum"] == pytest.approx(0.005), "error cost only"
+
+    def test_ok_cost_excludes_error_records(self):
+        records = [
+            _rec("e1", "M2", usage=[_call(cost=0.002)]),
+            _rec("e2", "M2", status="error", usage=[_call(cost=0.008)]),
+        ]
+        result = aggregate_usage_by_method(records)
+        assert result["M2"]["cost_usd_sum"] == pytest.approx(0.002)
+
+    def test_no_error_usage_gives_none_error_cost(self):
+        records = [_rec("e1", "M4", usage=[_call(cost=0.001)])]
+        result = aggregate_usage_by_method(records)
+        assert result["M4"]["error_cost_usd_sum"] is None
+
+
+# ---------------------------------------------------------------------------
+# Issue 9: cache_hit=True costs excluded from cost_usd_sum
+# ---------------------------------------------------------------------------
+
+class TestCacheHitCost:
+    def test_cache_hit_cost_excluded_from_paid_cost(self):
+        records = [
+            _rec("e1", "M4", usage=[_call(cost=0.002, cache=False),
+                                    _call(cost=0.001, cache=True)]),
+        ]
+        result = aggregate_usage_by_method(records)
+        m4 = result["M4"]
+        # Only non-cached call's cost counts as paid
+        assert m4["cost_usd_sum"] == pytest.approx(0.002)
+
+    def test_cached_cost_sum_in_output(self):
+        records = [_rec("e1", "M4", usage=[_call(cost=0.001, cache=True)])]
+        result = aggregate_usage_by_method(records)
+        assert "cached_cost_sum" in result["M4"], (
+            "cached_cost_sum key must be in output"
+        )
+
+    def test_cached_cost_sum_value(self):
+        records = [
+            _rec("e1", "M4", usage=[_call(cost=0.001, cache=True),
+                                    _call(cost=0.002, cache=True)]),
+        ]
+        result = aggregate_usage_by_method(records)
+        assert result["M4"]["cached_cost_sum"] == pytest.approx(0.003)
+
+    def test_all_cache_hits_gives_zero_paid_cost(self):
+        # All calls are cache hits → paid cost should be 0.0 (not None)
+        records = [
+            _rec("e1", "M4", usage=[_call(cost=0.001, cache=True)]),
+            _rec("e2", "M4", usage=[_call(cost=0.001, cache=True)]),
+        ]
+        result = aggregate_usage_by_method(records)
+        m4 = result["M4"]
+        assert m4["cost_usd_sum"] == pytest.approx(0.0), (
+            "All calls cached → paid cost is 0.0 (known zero, not None)"
+        )
+
+    def test_non_cached_calls_counted_normally(self):
+        records = [_rec("e1", "M4", usage=[_call(cost=0.003, cache=False)])]
+        result = aggregate_usage_by_method(records)
+        assert result["M4"]["cost_usd_sum"] == pytest.approx(0.003)
+        assert result["M4"]["cached_cost_sum"] is None
