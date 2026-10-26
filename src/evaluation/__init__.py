@@ -7,6 +7,7 @@ from .cost_metrics import (
     aggregate_draft_usage,
     estimate_budget,
 )
+from .statistical import paired_bootstrap_ci, compare_methods
 
 __all__ = [
     "exact_match",
@@ -21,4 +22,6 @@ __all__ = [
     "aggregate_usage_by_method",
     "aggregate_draft_usage",
     "estimate_budget",
+    "paired_bootstrap_ci",
+    "compare_methods",
 ]
