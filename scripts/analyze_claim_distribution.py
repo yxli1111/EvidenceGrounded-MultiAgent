@@ -8,6 +8,15 @@ import statistics
 from pathlib import Path
 from types import SimpleNamespace
 
+from src.core.run_journal import (
+    RunJournal,
+    JournalBudgetExceeded,
+    JournalError,
+    JournalUncertainState,
+)
+
+from src.core.tracking_llm_client import TrackingLLMClient
+
 from contracts.schemas import AnswerDraft
 from src.claims.extractor import (
     AtomicClaimExtractor,
@@ -149,24 +158,85 @@ def save_csv(records, output_path):
     temporary.replace(path)
 
 
+
 def load_drafts(path):
-    data = json.loads(
-        Path(path).read_text(encoding="utf-8")
-    )
+    """Load AnswerDraft objects from JSON or JSONL.
 
-    if not isinstance(data, list):
-        raise ValueError("Input must be a JSON list")
+    Supports:
+    1. Flat JSON arrays.
+    2. Flat JSONL records.
+    3. Nested A-module JSONL records containing a draft object.
+    """
+    path = Path(path)
+    text = path.read_text(encoding="utf-8-sig")
 
-    drafts = [
-        AnswerDraft(
-            draft_id=item["draft_id"],
-            short_answer=item["short_answer"],
-            explanation=item["explanation"],
-        )
-        for item in data
-    ]
+    if path.suffix.lower() == ".jsonl":
+        data = []
+
+        for line_number, line in enumerate(
+            text.splitlines(), start=1
+        ):
+            if not line.strip():
+                continue
+
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    f"Invalid JSONL at line {line_number}"
+                ) from exc
+
+            if not isinstance(record, dict):
+                raise ValueError(
+                    f"JSONL line {line_number} must be an object"
+                )
+
+            if "status" in record:
+                if record["status"] != "ok":
+                    raise ValueError(
+                        f"Draft generation failed at line "
+                        f"{line_number}: {record['status']}"
+                    )
+
+                item = record.get("draft")
+                if not isinstance(item, dict):
+                    raise ValueError(
+                        f"Missing draft at line {line_number}"
+                    )
+            else:
+                item = record
+
+            data.append(item)
+
+    else:
+        data = json.loads(text)
+
+        if not isinstance(data, list):
+            raise ValueError("Input must be a JSON list")
+
+    drafts = []
+
+    for index, item in enumerate(data, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(
+                f"Draft {index} must be an object"
+            )
+
+        try:
+            draft = AnswerDraft(
+                draft_id=item["draft_id"],
+                short_answer=item["short_answer"],
+                explanation=item["explanation"],
+            )
+        except (KeyError, TypeError) as exc:
+            raise ValueError(
+                f"Invalid draft at record {index}"
+            ) from exc
+
+        drafts.append(draft)
 
     ids = [draft.draft_id for draft in drafts]
+
     if len(ids) != len(set(ids)):
         raise ValueError("Duplicate draft_id detected")
 
@@ -287,12 +357,23 @@ def load_existing_records(output):
     return records
 
 
-def prepare_run(output, fingerprint, resume):
+
+def prepare_run(
+    output,
+    fingerprint,
+    resume,
+    allow_missing_csv=False,
+):
     output = Path(output)
     meta_file = metadata_path(output)
 
     if resume:
-        if not output.exists() or not meta_file.exists():
+        if not meta_file.exists():
+            raise ValueError(
+                "Resume requires metadata file"
+            )
+
+        if not output.exists() and not allow_missing_csv:
             raise ValueError(
                 "Resume requires CSV and metadata files"
             )
@@ -307,7 +388,10 @@ def prepare_run(output, fingerprint, resume):
                 "use a new output path"
             )
 
-        return load_existing_records(output)
+        if output.exists():
+            return load_existing_records(output)
+
+        return []
 
     if output.exists() or meta_file.exists():
         raise FileExistsError(
@@ -315,10 +399,14 @@ def prepare_run(output, fingerprint, resume):
             "matching metadata, or choose a new output path."
         )
 
-    save_metadata(meta_file, {
-        "fingerprint": fingerprint,
-        "format_version": 1,
-    })
+    save_metadata(
+        meta_file,
+        {
+            "fingerprint": fingerprint,
+            "format_version": 1,
+        },
+    )
+
     return []
 
 
@@ -393,6 +481,166 @@ def run_batch(
     return records
 
 
+def journal_path(output):
+    return Path(str(output) + ".journal.json")
+
+
+def reconcile_journal_csv(journal, existing, output):
+    """Recover committed journal rows after a crash before CSV checkpoint."""
+    rows = {row["draft_id"]: row for row in existing}
+
+    for draft_id, entry in journal.data["drafts"].items():
+        if entry["status"] == "in_progress":
+            raise JournalUncertainState(
+                f"Draft {draft_id} has uncertain usage; "
+                "manual review required"
+            )
+
+        expected = {
+            "draft_id": draft_id,
+            "status": entry["status"],
+            "claim_count": entry["claim_count"],
+            "error_type": entry.get("error_type", ""),
+        }
+
+        if draft_id in rows:
+            if rows[draft_id] != expected:
+                raise JournalError(
+                    f"CSV/journal mismatch: {draft_id}"
+                )
+        else:
+            rows[draft_id] = expected
+
+    if set(rows) != set(journal.data["drafts"]):
+        raise JournalError(
+            "CSV contains entries absent from journal"
+        )
+
+    result = list(rows.values())
+
+    if result != existing:
+        save_csv(result, output)
+
+    return result
+
+
+def run_batch_journal(
+    drafts,
+    extractor,
+    llm,
+    output,
+    max_examples,
+    existing,
+    journal,
+    per_draft_cost_usd,
+):
+    """Real-mode execution with durable reservations."""
+    records = reconcile_journal_csv(
+        journal, existing, output
+    )
+
+    recorded = {
+        row["draft_id"]
+        for row in records
+    }
+
+    reserved_calls = (
+        1 + extractor.max_repair_attempts
+    )
+
+    for draft in drafts[:max_examples]:
+        if draft.draft_id in recorded:
+            continue
+
+        try:
+            journal.start(
+                draft.draft_id,
+                reserved_calls,
+                per_draft_cost_usd,
+            )
+        except JournalBudgetExceeded:
+            print(
+                "Cumulative journal budget exhausted; stopping."
+            )
+            break
+
+        tracker = TrackingLLMClient(llm)
+
+        try:
+            claims = extractor.extract_claims(
+                draft, tracker
+            )
+
+            row = {
+                "draft_id": draft.draft_id,
+                "status": "success",
+                "claim_count": len(claims),
+                "error_type": "",
+            }
+
+        except (
+            LLMClientError,
+            ClaimExtractionError,
+            BudgetExceededError,
+        ) as exc:
+            row = {
+                "draft_id": draft.draft_id,
+                "status": "error",
+                "claim_count": None,
+                "error_type": type(exc).__name__,
+            }
+
+        # Unexpected exceptions leave the durable
+        # in_progress reservation for manual review.
+        snapshot = tracker.snapshot()
+
+        if snapshot.uncertain:
+            raise JournalUncertainState(
+                f"Uncertain usage for {draft.draft_id}: "
+                f"{snapshot.reasons}. "
+                "Do not resume without manual reconciliation."
+            )
+
+        if snapshot.generate_calls > reserved_calls:
+            raise JournalUncertainState(
+                "Observed calls exceed reservation"
+            )
+
+        if (
+            snapshot.observed_cost_usd
+            > per_draft_cost_usd + 1e-12
+        ):
+            raise JournalUncertainState(
+                "Observed cost exceeds per-draft reservation"
+            )
+
+        # Commit journal first.
+        # A crash before CSV write can be repaired.
+        journal.finish(
+            draft_id=draft.draft_id,
+            status=row["status"],
+            claim_count=row["claim_count"],
+            actual_calls=snapshot.generate_calls,
+            actual_cost_usd=snapshot.observed_cost_usd,
+            error_type=row["error_type"],
+        )
+
+        records.append(row)
+        recorded.add(draft.draft_id)
+
+        save_csv(records, output)
+
+        print(
+            f"{draft.draft_id}: "
+            f"{row['status']} | "
+            f"claims={row['claim_count']}"
+        )
+
+    if not Path(output).exists():
+        save_csv(records, output)
+
+    return records
+
 def build_parser():
     parser = argparse.ArgumentParser()
 
@@ -433,7 +681,15 @@ def build_parser():
         "--confirm-real", action="store_true"
     )
 
+    parser.add_argument(
+        "--per-draft-cost-usd",
+        type=float,
+        default=0.005,
+        help="Conservative USD reservation per draft in real mode",
+    )
+
     return parser
+
 
 
 def main():
@@ -441,7 +697,9 @@ def main():
     args = parser.parse_args()
 
     if args.max_examples < 1:
-        parser.error("--max-examples must be positive")
+        parser.error(
+            "--max-examples must be positive"
+        )
 
     if args.mode == "real":
         if not args.confirm_real:
@@ -449,15 +707,27 @@ def main():
                 "Real API mode requires --confirm-real"
             )
 
+        if (
+            not math.isfinite(args.per_draft_cost_usd)
+            or args.per_draft_cost_usd <= 0
+        ):
+            parser.error(
+                "--per-draft-cost-usd must be "
+                "positive and finite"
+            )
+
         if args.max_calls < 1:
-            parser.error("--max-calls must be positive")
+            parser.error(
+                "--max-calls must be positive"
+            )
 
         if (
             not math.isfinite(args.max_cost_usd)
             or args.max_cost_usd <= 0
         ):
             parser.error(
-                "--max-cost-usd must be positive and finite"
+                "--max-cost-usd must be "
+                "positive and finite"
             )
 
         if (
@@ -485,10 +755,14 @@ def main():
     )
 
     existing = prepare_run(
-        args.output, fingerprint, args.resume
+        args.output,
+        fingerprint,
+        args.resume,
+        allow_missing_csv=(args.mode == "real"),
     )
 
     budget = None
+    journal = None
 
     if args.mode == "mock":
         llm = MockLLMClient(
@@ -506,20 +780,51 @@ def main():
             )
         )
 
+        journal = RunJournal(
+            journal_path(args.output),
+            fingerprint,
+            max_calls=args.max_calls,
+            max_cost_usd=args.max_cost_usd,
+        )
+
+        if args.resume:
+            journal.load()
+            journal.assert_safe_to_resume()
+        else:
+            if journal.path.exists():
+                raise JournalError(
+                    "Journal already exists; use --resume"
+                )
+            journal.create()
+
         llm = OpenRouterLLMClient(
             budget_guard=budget
         )
 
     try:
-        records = run_batch(
-            drafts=drafts,
-            extractor=extractor,
-            llm=llm,
-            output=args.output,
-            max_examples=args.max_examples,
-            existing=existing,
-            budget=budget,
-        )
+        if journal is not None:
+            records = run_batch_journal(
+                drafts=drafts,
+                extractor=extractor,
+                llm=llm,
+                output=args.output,
+                max_examples=args.max_examples,
+                existing=existing,
+                journal=journal,
+                per_draft_cost_usd=(
+                    args.per_draft_cost_usd
+                ),
+            )
+        else:
+            records = run_batch(
+                drafts=drafts,
+                extractor=extractor,
+                llm=llm,
+                output=args.output,
+                max_examples=args.max_examples,
+                existing=existing,
+                budget=budget,
+            )
 
     finally:
         if budget is not None:
@@ -537,6 +842,7 @@ def main():
     summary = summarize(records)
 
     print("\n=== CLAIM DISTRIBUTION ===")
+
     for key, value in summary.items():
         print(f"{key}: {value}")
 
