@@ -14,7 +14,7 @@ def main():
     inputs, gold_lookup = load_hotpotqa(limit=50)
     retriever = EvidenceRetriever()
 
-    ks = [1, 3, 5, 10]
+    ks = [1, 3, 5, 10, 15, 20, 30]
     records = []
 
     for i, example in enumerate(inputs, start=1):
