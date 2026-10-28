@@ -5,9 +5,14 @@ so that E's own tests pass without those packages installed.
 
 Classes
 -------
-BRetrievalAdapter   — wraps B's EvidenceRetriever; converts Sentence ↔ dict
-DVerificationAdapter — wraps D's module functions; calls configure() on init
-AAnswerAdapter       — wraps A's AnswerAgent; exposes run_m2
+BRetrievalAdapter    — wraps B's EvidenceRetriever; converts Sentence ↔ dict and
+                       converts B's result dicts → contracts.schemas.Evidence objects
+                       (required by D's evidence_payload attribute access)
+DVerificationAdapter — wraps D's TWO modules: src.verification (configure/verify_*/
+                       runtime_metadata) and src.agents.revision (revise_answer)
+AAnswerAdapter       — wraps A's AnswerAgent; exposes run_m2 with correct signature
+                       (example, draft, llm, config) from src.agents.baselines;
+                       run_m2 is absent when baselines is not importable
 
 Helpers
 -------
@@ -79,35 +84,50 @@ def b_example_to_contracts(b_dict: dict) -> tuple[str, str, list[dict]]:
 class BRetrievalAdapter:
     """Adapts B's EvidenceRetriever to E's RetrievePort interface.
 
-    B's retriever expects context as list[dict] with "title" key.
-    E's runner passes Sentence objects (or dicts).  This adapter normalises
-    context before passing it to B and returns plain dicts as evidence.
+    B's retriever expects context as list[dict] with "title" key and returns
+    list[dict].  D's evidence_payload accesses evidence as objects (ev.doc_title,
+    ev.sentence_id, ev.text, ev.score, ev.rank, ev.retrieval_query).
 
-    The Evidence text field is copied verbatim from B's result so that D's
-    evidence_payload validation (which compares text against the original
-    context sentences) passes without modification.
+    This adapter:
+    1. Converts Sentence objects / dicts → {title, sentence_id, text} dicts for B
+    2. Converts B's result dicts → contracts.schemas.Evidence objects for D
+
+    The Evidence.text is copied verbatim from B's result so that D's validation
+    (which checks text == context sentence text) passes without modification.
     """
 
     def __init__(self, retriever: Any) -> None:
         self._retriever = retriever
 
-    def retrieve(self, query: str, context: Any, top_k: int) -> list[dict]:
+    def retrieve(self, query: str, context: Any, top_k: int) -> list:
         context_dicts = sentences_to_context_dicts(list(context) if context else [])
         raw = self._retriever.retrieve(query, context_dicts, top_k)
-        return [self._normalise_evidence(ev) for ev in raw]
+        return [self._to_evidence(ev) for ev in raw]
 
     @staticmethod
-    def _normalise_evidence(ev: Any) -> dict:
-        if isinstance(ev, dict):
+    def _to_evidence(ev: Any) -> Any:
+        """Convert B's result dict to contracts.schemas.Evidence object."""
+        from contracts.schemas import Evidence  # lazy import
+        if isinstance(ev, Evidence):
             return ev
-        return {
-            "doc_title": ev.doc_title,
-            "sentence_id": ev.sentence_id,
-            "text": ev.text,
-            "score": float(ev.score),
-            "retrieval_query": ev.retrieval_query,
-            "rank": ev.rank,
-        }
+        if isinstance(ev, dict):
+            return Evidence(
+                doc_title=ev["doc_title"],
+                sentence_id=ev["sentence_id"],
+                text=ev["text"],
+                score=float(ev["score"]),
+                retrieval_query=ev.get("retrieval_query", ""),
+                rank=ev["rank"],
+            )
+        # Already an object with the right attributes — return as-is if it is Evidence
+        return Evidence(
+            doc_title=ev.doc_title,
+            sentence_id=ev.sentence_id,
+            text=ev.text,
+            score=float(ev.score),
+            retrieval_query=getattr(ev, "retrieval_query", ""),
+            rank=ev.rank,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -115,19 +135,30 @@ class BRetrievalAdapter:
 # ---------------------------------------------------------------------------
 
 class DVerificationAdapter:
-    """Adapts D's module-level functions to E's VerificationPort interface.
+    """Adapts D's two-module structure to E's VerificationPort interface.
 
-    Calls module.configure() exactly once at construction (as required by
-    GAP-6).  prompt_versions comes from module.runtime_metadata() if
-    available.
+    D's public API is split across two modules (confirmed from feat/d-verification-revision):
+      src.verification        — configure, runtime_metadata, verify_draft, verify_claims
+      src.agents.revision     — revise_answer
+
+    Calls verification_module.configure() exactly once at construction (GAP-6).
+    prompt_versions comes from verification_module.runtime_metadata() if available.
     """
 
-    def __init__(self, module: Any, **configure_kwargs: Any) -> None:
-        self._module = module
-        configure_fn = getattr(module, "configure", None)
+    def __init__(
+        self,
+        verification_module: Any,
+        revision_module: Any,
+        **configure_kwargs: Any,
+    ) -> None:
+        self._verification = verification_module
+        self._revision = revision_module
+
+        configure_fn = getattr(verification_module, "configure", None)
         if callable(configure_fn):
             configure_fn(**configure_kwargs)
-        meta_fn = getattr(module, "runtime_metadata", None)
+
+        meta_fn = getattr(verification_module, "runtime_metadata", None)
         if callable(meta_fn):
             meta = meta_fn() or {}
             self._prompt_versions: dict = meta.get("prompt_versions", {}) or {}
@@ -139,7 +170,7 @@ class DVerificationAdapter:
         return self._prompt_versions
 
     def verify_draft(self, example: Any, draft: Any, evidence: list, llm: Any) -> Any:
-        return self._module.verify_draft(example, draft, evidence, llm)
+        return self._verification.verify_draft(example, draft, evidence, llm)
 
     def verify_claims(
         self,
@@ -149,10 +180,10 @@ class DVerificationAdapter:
         evidence_by_claim: dict,
         llm: Any,
     ) -> Any:
-        return self._module.verify_claims(example, draft, claims, evidence_by_claim, llm)
+        return self._verification.verify_claims(example, draft, claims, evidence_by_claim, llm)
 
     def revise_answer(self, example: Any, draft: Any, feedback: Any, llm: Any) -> Any:
-        return self._module.revise_answer(example, draft, feedback, llm)
+        return self._revision.revise_answer(example, draft, feedback, llm)
 
 
 # ---------------------------------------------------------------------------
@@ -163,12 +194,29 @@ class AAnswerAdapter:
     """Adapts A's AnswerAgent to E's DraftPort interface.
 
     Exposes generate_draft, self_reflect, independent_critique directly from
-    the agent.  Also exposes run_m2() if A's baselines module provides it,
-    and prompt_versions as a dict (from agent.prompt_versions).
+    the agent.
+
+    run_m2 is exposed only when src.agents.baselines can be imported.  It calls
+    baselines.run_m2(example, draft, llm, agent.config) — config is required.
+    There is NO silent fallback to self_reflect when baselines is unavailable.
+
+    prompt_versions is a dict (from agent.prompt_versions).
     """
 
     def __init__(self, agent: Any) -> None:
         self._agent = agent
+        # Try to import baselines once at construction time.
+        # If successful, bind run_m2 as an instance method.
+        try:
+            from src.agents import baselines as _baselines  # lazy import
+            _config = getattr(agent, "config", None)
+
+            def run_m2(example: Any, draft: Any, llm: Any) -> Any:
+                return _baselines.run_m2(example, draft, llm, _config)
+
+            self.run_m2 = run_m2  # bound only when baselines is importable
+        except (ImportError, AttributeError):
+            pass  # run_m2 not provided — caller checks with hasattr
 
     @property
     def prompt_versions(self) -> dict:
@@ -185,11 +233,3 @@ class AAnswerAdapter:
 
     def independent_critique(self, example: Any, draft: Any, llm: Any) -> Any:
         return self._agent.independent_critique(example, draft, llm)
-
-    def run_m2(self, example: Any, draft: Any, llm: Any) -> Any:
-        """Call A's baselines.run_m2 if available; fall back to self_reflect."""
-        try:
-            from src.baselines import run_m2 as _baselines_run_m2  # lazy import
-            return _baselines_run_m2(self._agent, example, draft, llm)
-        except (ImportError, AttributeError):
-            return self._agent.self_reflect(example, draft, llm)

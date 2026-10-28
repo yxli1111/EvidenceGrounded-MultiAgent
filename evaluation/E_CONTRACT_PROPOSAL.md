@@ -103,24 +103,44 @@ Until `contracts/schemas.py` exists, E's runner uses a mock version in
 
 ---
 
-## GAP-3: Dev/eval split manifest does not exist (B)
+## GAP-3: Dev/eval split manifest (B)
 
-**Status:** Blocking for evaluation fairness.
+**Status:** Partially resolved.  Format confirmed; file pending from B.
 
 `PROJECT_CONTRACT.md` Section 2: "B generates fixed-seed disjoint split manifests."
-`PROJECT_CONTRACT.md` Section 3: `DatasetPort.load_split(split_name)`.
 
-**Current state:** B's `load_hotpotqa(split, limit)` uses HotpotQA's built-in
-splits only; no custom manifest file exists; `DatasetPort` Protocol not implemented.
+**Confirmed format:** `research/B_dev_50_ids.json` — a JSON `list[str]` of the 50
+HotpotQA dev example IDs used during development (standard HotpotQA ID strings,
+e.g. `"5a8b57f25542995d1e6f1371"`).
 
-**Request from B:**
-1. Generate a fixed-seed split manifest (e.g. `data/splits/eval_ids.txt`) that
-   separates dev examples (tuning allowed) from eval examples (tuning forbidden).
-2. Implement `load_split(split_name: str)` that returns
-   `(list[QAInput], dict[str, QAGold])` using the manifest.
+**Action required from B:** Commit `research/B_dev_50_ids.json` to the repo.
 
-**E's interim plan:** E's runner accepts a plain list of examples passed in
-from outside; the split source is injected at call time.
+**E's enforcement:** `src/evaluation/manifest.py` provides:
+```python
+dev_ids = load_id_manifest("research/B_dev_50_ids.json")  # returns set[str]
+assert_disjoint(dev_ids, eval_ids)                          # raises if overlap
+runner.run(examples, out, exclude_ids=dev_ids)              # raises if overlap
+```
+`run()` raises `ValueError` listing all overlapping IDs — it does NOT skip
+silently.  The caller must filter the example list before calling `run()`.
+
+**M5 evidence mapping contract:**  `evidence_by_claim` passed to D's
+`verify_claims()` is `dict[str, list]` keyed by `claim_id`.  Every claim_id
+is present even when `m5_total_evidence_budget` limits evidence to 0 for some
+claims (empty list, never missing key).  D must not KeyError on absent claim_ids.
+
+**Retrieval parameter defaults (pending team decision):**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `top_k` | 5 | Global fallback |
+| `m4_top_k` | None (= top_k) | M4-specific override |
+| `m5_top_k_per_claim` | None (= top_k) | M5 per-claim override |
+| `m5_total_evidence_budget` | None (no limit) | Round-robin cap across M5 claims |
+| `query_include_question` | False | Prepend question + newline to M4/M5 queries |
+
+All retrieval params are logged in every `ExperimentRecord.model_settings["_retrieval"]`
+for full reproducibility.  Team to confirm defaults before formal evaluation run.
 
 ---
 
@@ -205,6 +225,23 @@ class DraftPort(Protocol):
 Confirmed from `PROJECT_CONTRACT.md` Section 2:
 M3 independent critique must return `label=None, evidence_ids=[]` per item —
 A must not invent evidence verdicts or citations.
+
+---
+
+## D's two-module structure (confirmed from feat/d-verification-revision)
+
+D's public API is split across two Python modules:
+
+| Module | Functions |
+|--------|-----------|
+| `src.verification` | `configure(**kwargs)`, `runtime_metadata()`, `verify_draft(...)`, `verify_claims(...)` |
+| `src.agents.revision` | `revise_answer(example, draft, feedback, llm)` |
+
+`DVerificationAdapter` in `src/runner/adapters.py` wraps both.  The constructor
+takes `verification_module` and `revision_module` as separate arguments, calls
+`configure()` once at construction, and exposes all four methods through a single
+interface.  **Do not pass a single merged module** — the adapter specifically
+routes `revise_answer` to `src.agents.revision`.
 
 ---
 

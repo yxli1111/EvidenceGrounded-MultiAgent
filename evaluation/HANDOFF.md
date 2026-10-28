@@ -23,7 +23,10 @@
 | `tests/test_evaluation_*.py` | Unit tests for evaluation modules |
 | `tests/test_runner_e2e.py` | End-to-end runner tests including fatal errors, raw_outputs, question_type |
 | `tests/test_runner_usage_wrapper.py` | 13 tests for UsageWrapper |
-| `tests/test_runner_adapters.py` | 14 adapter tests (skipped when contracts not installed) |
+| `tests/test_runner_adapters.py` | 18 adapter tests (skipped when contracts not installed) |
+| `tests/test_runner_params.py` | 16 tests for configurable retrieval params (m4_top_k, budget, etc.) |
+| `src/evaluation/manifest.py` | `load_id_manifest` + `assert_disjoint` for dev/eval isolation |
+| `tests/test_evaluation_manifest.py` | 11 tests for manifest utilities |
 
 ---
 
@@ -48,6 +51,10 @@ must satisfy the corresponding `typing.Protocol` defined in
 ```python
 from src.runner.runner import ExperimentRunner
 
+from src.evaluation.manifest import load_id_manifest, assert_disjoint
+
+dev_ids = load_id_manifest("research/B_dev_50_ids.json")   # B must provide this file
+
 runner = ExperimentRunner(
     draft_port=YourDraftPort(),          # implements DraftPort
     retrieve_port=YourRetrievePort(),    # implements RetrievePort
@@ -55,12 +62,19 @@ runner = ExperimentRunner(
     verification_port=YourVerifPort(),   # implements VerificationPort
     llm=YourLLMClient(),                 # implements LLMClient
     top_k=5,
+    m4_top_k=5,                          # M4-specific top_k (None = use top_k)
+    m5_top_k_per_claim=5,                # M5 per-claim top_k (None = use top_k)
+    m5_total_evidence_budget=None,       # None = no limit; int = round-robin cap
+    query_include_question=False,        # True = prepend question to M4/M5 queries
 )
+
+assert_disjoint(dev_ids, eval_ids)       # raise if dev examples leak into eval set
 
 records = runner.run(
     examples,          # list of objects with .example_id, .question, .context
     "output.jsonl",    # checkpoint path — safe to resume if interrupted
     model_settings={"model": "openai/gpt-4o", "temperature": 0.0},
+    exclude_ids=dev_ids,  # raises ValueError if any example_id is in dev_ids
 )
 ```
 
@@ -137,6 +151,15 @@ provide a split file that can be loaded into this format.  Suggested schema:
 ```json
 {"example_id": "hotpot_dev_0", "question": "...", "context": [...]}
 ```
+
+B must also provide `research/B_dev_50_ids.json` — a JSON list of the 50 dev
+example IDs used during development.  Format: `["hotpot_dev_0", ...]`.
+These IDs **must be excluded** from the formal evaluation set.  Use
+`load_id_manifest` + `exclude_ids` (see Quick Start above) to enforce this.
+
+M5 evidence mapping: `evidence_by_claim` is a `dict[str, list]` keyed by
+`claim_id` (every claim ID present, even if its list is empty due to a tight
+`m5_total_evidence_budget`).  D's `verify_claims` requires all claim IDs.
 
 ### Gold supporting facts key (GAP-1 — already handled)
 

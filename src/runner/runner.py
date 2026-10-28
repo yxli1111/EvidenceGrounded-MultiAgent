@@ -20,10 +20,10 @@ Integration notes
   When real implementations arrive, replace the ports; the runner is unchanged.
 * D's configure() must be called by the experiment script BEFORE creating the
   runner, not inside the runner (see evaluation/E_CONTRACT_PROPOSAL.md GAP-6).
-* M4 query = draft.explanation (plain explanation without question prefix).
-  M5 query = claim.claim_text.  Both policies are frozen per CONTRACT pending
-  a team decision; change the _m4_query / _m5_query helpers if the team decides
-  to add the question prefix.
+* M4 query = draft.explanation (or question + "\n" + explanation when
+  query_include_question=True).  M5 query = claim.claim_text (or question +
+  "\n" + claim_text).  Template is identical for both methods; controlled by
+  the query_include_question constructor flag.
 """
 
 from __future__ import annotations
@@ -153,12 +153,21 @@ def _ser_claims(claims: list) -> list[dict]:
     return result
 
 
-def _m4_query(draft: Any) -> str:
-    return _attr(draft, "explanation") or ""
+def _m5_allocations(
+    n_claims: int, top_k_per_claim: int, budget: int | None
+) -> list[int]:
+    """Round-robin evidence budget allocation across claims.
 
-
-def _m5_query(claim: Any) -> str:
-    return _attr(claim, "claim_text") or ""
+    If budget is None, every claim gets top_k_per_claim slots.
+    Otherwise slots are distributed round-robin then capped at top_k_per_claim.
+    D requires every claim_id in evidence_by_claim; claims with 0 slots get [].
+    """
+    if budget is None or n_claims == 0:
+        return [top_k_per_claim] * n_claims
+    allocations = [0] * n_claims
+    for slot in range(budget):
+        allocations[slot % n_claims] += 1
+    return [min(a, top_k_per_claim) for a in allocations]
 
 
 # ---------------------------------------------------------------------------
@@ -174,7 +183,13 @@ class ExperimentRunner:
         claims_port: C's extract_claims.
         verification_port: D's verify_draft / verify_claims / revise_answer.
         llm: C's LLMClient (injected into every port call).
-        top_k: number of evidence sentences to retrieve per query.
+        top_k: default evidence sentences per retrieval call (M4 and M5 fallback).
+        m4_top_k: evidence sentences for M4 (overrides top_k; None = use top_k).
+        m5_top_k_per_claim: evidence sentences per claim in M5 (None = use top_k).
+        m5_total_evidence_budget: total evidence slots across all M5 claims;
+            distributed round-robin.  None = no limit.
+        query_include_question: if True, prepend question + "\\n" to M4/M5 queries.
+            Default False (explanation / claim_text only).
     """
 
     def __init__(
@@ -185,6 +200,10 @@ class ExperimentRunner:
         verification_port: Any,
         llm: Any,
         top_k: int = 5,
+        m4_top_k: int | None = None,
+        m5_top_k_per_claim: int | None = None,
+        m5_total_evidence_budget: int | None = None,
+        query_include_question: bool = False,
     ) -> None:
         self.draft_port = draft_port
         self.retrieve_port = retrieve_port
@@ -192,6 +211,10 @@ class ExperimentRunner:
         self.verification_port = verification_port
         self.llm = llm
         self.top_k = top_k
+        self.m4_top_k = m4_top_k
+        self.m5_top_k_per_claim = m5_top_k_per_claim
+        self.m5_total_evidence_budget = m5_total_evidence_budget
+        self.query_include_question = query_include_question
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -202,6 +225,7 @@ class ExperimentRunner:
         examples: list,
         output_path: str,
         model_settings: dict | None = None,
+        exclude_ids: set[str] | None = None,
     ) -> list[ExperimentRecord]:
         """Run all uncompleted (example, method) pairs and append to output_path.
 
@@ -209,10 +233,35 @@ class ExperimentRunner:
             examples: list of QAInput (or mock) objects.
             output_path: path to JSONL file; created if absent, appended if present.
             model_settings: dict snapshot of model/sampling config stored in each record.
+            exclude_ids: set of example_ids that must not be in examples
+                (e.g. dev IDs excluded from formal evaluation).  Raises ValueError
+                if any overlap is found — the caller must filter before running.
 
         Returns:
             List of newly created ExperimentRecords (does not include pre-existing ones).
         """
+        if exclude_ids:
+            overlap = {
+                _attr(ex, "example_id") for ex in examples
+            } & set(exclude_ids)
+            if overlap:
+                raise ValueError(
+                    f"Examples in exclude_ids must be removed before running. "
+                    f"Overlapping IDs: {sorted(overlap)}"
+                )
+
+        # Merge retrieval params into a copy of model_settings for full traceability.
+        effective_ms: dict | None = dict(model_settings) if model_settings else {}
+        effective_ms["_retrieval"] = {
+            "m4_top_k": self.m4_top_k if self.m4_top_k is not None else self.top_k,
+            "m5_top_k_per_claim": self.m5_top_k_per_claim if self.m5_top_k_per_claim is not None else self.top_k,
+            "m5_total_evidence_budget": self.m5_total_evidence_budget,
+            "query_include_question": self.query_include_question,
+            "query_template": "question+nl+text" if self.query_include_question else "text_only",
+        }
+        if not model_settings:
+            effective_ms = effective_ms  # keep as dict even if caller passed None
+
         completed = load_completed(output_path)
         dpath = drafts_path(output_path)
         draft_cache = load_draft_cache(dpath)
@@ -253,7 +302,7 @@ class ExperimentRunner:
                     for mid in _METHOD_IDS:
                         if (eid, mid) in completed:
                             continue
-                        rec = make_error_record(eid, mid, str(exc), question, model_settings)
+                        rec = make_error_record(eid, mid, str(exc), question, effective_ms)
                         rec.draft_usage = draft_usage
                         rec.prompt_versions = prompt_versions
                         rec.question_type = question_type
@@ -277,10 +326,10 @@ class ExperimentRunner:
                     continue
                 try:
                     method_fn = getattr(self, f"_run_{mid.lower()}")
-                    rec = method_fn(example, draft, model_settings)
+                    rec = method_fn(example, draft, effective_ms)
                 except Exception as exc:
                     partial_usage = self._drain_usage()
-                    rec = make_error_record(eid, mid, str(exc), question, model_settings)
+                    rec = make_error_record(eid, mid, str(exc), question, effective_ms)
                     rec.usage = partial_usage
                     rec.raw_outputs = list(getattr(exc, "raw_outputs", None) or []) or None
                     rec.draft_usage = list(draft_usage)
@@ -329,10 +378,30 @@ class ExperimentRunner:
     ) -> ExperimentRecord:
         run_m2_fn = getattr(self.draft_port, "run_m2", None)
         if callable(run_m2_fn):
-            revision = run_m2_fn(example, draft, self.llm)
+            output = run_m2_fn(example, draft, self.llm)
+            usage = self._drain_usage()
+            # BaselineOutput has .final (RevisionResult | None) and .feedback
+            final_obj = getattr(output, "final", None)
+            fb_obj = getattr(output, "feedback", None)
+            revision = final_obj if final_obj is not None else output
+            if fb_obj is not None:
+                feedback_dict = _ser_feedback(fb_obj)
+            else:
+                rd_tmp = _ser_revision(revision)
+                feedback_dict = {
+                    "feedback_id": rd_tmp.get("feedback_id", ""),
+                    "items": [],
+                    "overall_comment": "M2 self-reflection",
+                }
         else:
             revision = self.draft_port.self_reflect(example, draft, self.llm)
-        usage = self._drain_usage()
+            usage = self._drain_usage()
+            rd_tmp = _ser_revision(revision)
+            feedback_dict = {
+                "feedback_id": rd_tmp.get("feedback_id", ""),
+                "items": [],
+                "overall_comment": "M2 self-reflection",
+            }
         dd = _ser_draft(draft)
         rd = _ser_revision(revision)
         return ExperimentRecord(
@@ -346,7 +415,7 @@ class ExperimentRunner:
             explanation=dd["explanation"],
             final_answer=rd["final_answer"],
             final_explanation=rd["final_explanation"],
-            feedback={"feedback_id": rd["feedback_id"], "items": [], "overall_comment": "M2 self-reflection"},
+            feedback=feedback_dict,
             usage=usage,
             model_settings=model_settings,
         )
@@ -378,9 +447,14 @@ class ExperimentRunner:
     def _run_m4(
         self, example: Any, draft: Any, model_settings: dict | None
     ) -> ExperimentRecord:
-        query = _m4_query(draft)
+        effective_k = self.m4_top_k if self.m4_top_k is not None else self.top_k
+        question = _attr(example, "question", "")
+        explanation = _attr(draft, "explanation") or ""
+        if isinstance(draft, dict):
+            explanation = draft.get("explanation", "")
+        query = (question + "\n" + explanation) if self.query_include_question and question else explanation
         context = _attr(example, "context")
-        evidence = self.retrieve_port.retrieve(query, context, self.top_k)
+        evidence = self.retrieve_port.retrieve(query, context, effective_k)
         feedback = self.verification_port.verify_draft(example, draft, evidence, self.llm)
         revision = self.verification_port.revise_answer(example, draft, feedback, self.llm)
         usage = self._drain_usage()
@@ -407,16 +481,26 @@ class ExperimentRunner:
         self, example: Any, draft: Any, model_settings: dict | None
     ) -> ExperimentRecord:
         context = _attr(example, "context")
+        question = _attr(example, "question", "")
         claims = self.claims_port.extract_claims(draft, self.llm)
+
+        top_k_per_claim = self.m5_top_k_per_claim if self.m5_top_k_per_claim is not None else self.top_k
+        allocations = _m5_allocations(len(claims), top_k_per_claim, self.m5_total_evidence_budget)
 
         evidence_by_claim: dict[str, list] = {}
         evidence_by_claim_dicts: dict[str, list[dict]] = {}
         all_ev_dicts: list[dict] = []
         seen: set[tuple] = set()
 
-        for claim in claims:
+        for i, claim in enumerate(claims):
             cid = _attr(claim, "claim_id")
-            evs = self.retrieve_port.retrieve(_m5_query(claim), context, self.top_k)
+            claim_text = _attr(claim, "claim_text") or ""
+            claim_query = (question + "\n" + claim_text) if self.query_include_question and question else claim_text
+            alloc_k = allocations[i]
+            if alloc_k > 0:
+                evs = self.retrieve_port.retrieve(claim_query, context, alloc_k)
+            else:
+                evs = []
             evidence_by_claim[cid] = evs
             ev_dicts = _ser_evidence_list(evs)
             evidence_by_claim_dicts[cid] = ev_dicts
