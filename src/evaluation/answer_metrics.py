@@ -18,6 +18,13 @@ from collections import Counter
 _YES_NO_SPECIAL = {"yes", "no", "noanswer"}
 
 
+def _gold_get(gold, key, default=None):
+    """Get a field from a gold entry that may be a dict or a QAGold object."""
+    if isinstance(gold, dict):
+        return gold.get(key, default)
+    return getattr(gold, key, default)
+
+
 def normalize_answer(s: str | None) -> str:
     if s is None:
         return ""
@@ -103,7 +110,8 @@ def compute_em_f1_batch(
             continue
 
         bucket["n_ok"] += 1
-        gold = gold_lookup.get(eid, {}).get("gold_answer", "")
+        gold_entry = gold_lookup.get(eid)
+        gold = _gold_get(gold_entry, "gold_answer", "") if gold_entry is not None else ""
         pred = rec.get("final_answer") or ""
         bucket["em_sum"] += exact_match(pred, gold)
         bucket["f1_sum"] += token_f1(pred, gold)  # pred already "" if None
@@ -151,7 +159,8 @@ def export_per_example_csv(
             status = rec.get("status", "") if isinstance(rec, dict) else getattr(rec, "status", "")
             qt = rec.get("question_type") if isinstance(rec, dict) else getattr(rec, "question_type", None)
 
-            gold_answer = gold_lookup.get(eid, {}).get("gold_answer", "")
+            gold_entry = gold_lookup.get(eid)
+            gold_answer = _gold_get(gold_entry, "gold_answer", "") if gold_entry is not None else ""
             if status != "ok":
                 em_val = f1_val = draft_em_val = 0.0
             else:

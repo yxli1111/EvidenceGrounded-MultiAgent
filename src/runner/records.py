@@ -70,6 +70,9 @@ class ExperimentRecord:
     question_type: str | None = None        # "factoid" | "yesno" | etc.
     raw_outputs: list[str] | None = None    # raw LLM responses on AgentOutputError
 
+    # Retry tracking: attempt 1 = first run; incremented on each retry
+    attempt: int = 1
+
 
 # ---------------------------------------------------------------------------
 # Serialisation helpers
@@ -81,6 +84,7 @@ def to_jsonl_line(record: ExperimentRecord) -> str:
 
 def from_jsonl_line(line: str) -> ExperimentRecord:
     data = json.loads(line)
+    data.setdefault("attempt", 1)  # backward compat: old records have no attempt field
     return ExperimentRecord(**data)
 
 
@@ -98,9 +102,37 @@ def load_records(path: str) -> list[ExperimentRecord]:
     return records
 
 
-def load_completed(path: str) -> set[tuple[str, str]]:
-    """Return set of (example_id, method_id) pairs that already have a record."""
-    return {(r.example_id, r.method_id) for r in load_records(path)}
+def load_completed(path: str, retry_errors: bool = False) -> set[tuple[str, str]]:
+    """Return set of (example_id, method_id) pairs that are considered done.
+
+    When retry_errors=False (default): any existing record = done.
+    When retry_errors=True: only pairs whose *latest* attempt has status="ok"
+    are considered done; error records are re-run.
+    """
+    records = load_records(path)
+    if not retry_errors:
+        return {(r.example_id, r.method_id) for r in records}
+    latest: dict[tuple, ExperimentRecord] = {}
+    for r in records:
+        key = (r.example_id, r.method_id)
+        if key not in latest or r.attempt > latest[key].attempt:
+            latest[key] = r
+    return {key for key, rec in latest.items() if rec.status == "ok"}
+
+
+def latest_records(records: list[ExperimentRecord]) -> list[ExperimentRecord]:
+    """Return the highest-attempt record per (example_id, method_id) pair.
+
+    Use this to compute accuracy metrics (EM, F1, Recall@k) so that retried
+    examples are counted once.  Cost metrics should use all records so that
+    retry waste is not hidden.
+    """
+    latest: dict[tuple, ExperimentRecord] = {}
+    for r in records:
+        key = (r.example_id, r.method_id)
+        if key not in latest or r.attempt > latest[key].attempt:
+            latest[key] = r
+    return list(latest.values())
 
 
 def append_record(path: str, record: ExperimentRecord) -> None:
@@ -125,6 +157,18 @@ def make_error_record(
         error=error_msg,
         model_settings=model_settings,
     )
+
+
+# ---------------------------------------------------------------------------
+# Lightweight draft dataclass (fallback when contracts.schemas is unavailable)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class _DraftFallback:
+    """Substitute for contracts.schemas.AnswerDraft when that package is absent."""
+    draft_id: str
+    short_answer: str
+    explanation: str
 
 
 # ---------------------------------------------------------------------------

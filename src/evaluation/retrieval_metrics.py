@@ -26,6 +26,13 @@ from __future__ import annotations
 from enum import Enum
 
 
+def _gold_get(gold, key, default=None):
+    """Get a field from a gold entry that may be a dict or a QAGold object."""
+    if isinstance(gold, dict):
+        return gold.get(key, default)
+    return getattr(gold, key, default)
+
+
 class RecallDenominator(Enum):
     QUESTION_CONDITIONED = "question_conditioned"
     CLAIM_CONDITIONED = "claim_conditioned"
@@ -142,7 +149,8 @@ def mean_recall_at_k(
             continue
 
         n_ok += 1
-        gold = gold_lookup.get(eid, {}).get("gold_supporting_facts", [])
+        gold_entry = gold_lookup.get(eid)
+        gold = _gold_get(gold_entry, "gold_supporting_facts", []) if gold_entry is not None else []
         evidence = rec.get("evidence", [])
         recall_sum += recall_at_k(evidence, gold, k, denominator)
 

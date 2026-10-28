@@ -37,6 +37,7 @@ from .records import (
     drafts_path,
     load_completed,
     load_draft_cache,
+    load_records,
     make_error_record,
     save_draft,
 )
@@ -62,18 +63,21 @@ def _attr(obj: Any, name: str, default: Any = None) -> Any:
 
 
 def _collect_prompt_versions(ports: list[tuple[str, Any]]) -> dict:
-    """Merge prompt_versions from all ports into one dict.
+    """Merge prompt_versions from all ports into one dict, skipping None values.
 
-    If a port has a .prompt_versions dict, all its entries are merged in.
-    If it only has .prompt_version (str), it is stored under the port name.
+    If a port has a .prompt_versions dict, all non-None entries are merged in.
+    If it only has .prompt_version (str), it is stored under the port name
+    only when the value is not None.
     """
     result: dict = {}
     for port_name, port in ports:
         pv = getattr(port, "prompt_versions", None)
         if isinstance(pv, dict):
-            result.update(pv)
+            result.update({k: v for k, v in pv.items() if v is not None})
         else:
-            result[port_name] = getattr(port, "prompt_version", None)
+            val = getattr(port, "prompt_version", None)
+            if val is not None:
+                result[port_name] = val
     return result
 
 
@@ -153,6 +157,23 @@ def _ser_claims(claims: list) -> list[dict]:
     return result
 
 
+def _make_draft_obj(d: dict) -> Any:
+    """Convert a cached draft dict to an AnswerDraft object.
+
+    Tries contracts.schemas.AnswerDraft first; falls back to _DraftFallback
+    so that ports doing draft.draft_id / draft.explanation always work.
+    """
+    try:
+        from contracts.schemas import AnswerDraft
+    except ImportError:
+        from .records import _DraftFallback as AnswerDraft  # type: ignore[assignment]
+    return AnswerDraft(
+        draft_id=d["draft_id"],
+        short_answer=d["short_answer"],
+        explanation=d["explanation"],
+    )
+
+
 def _m5_allocations(
     n_claims: int, top_k_per_claim: int, budget: int | None
 ) -> list[int]:
@@ -226,6 +247,7 @@ class ExperimentRunner:
         output_path: str,
         model_settings: dict | None = None,
         exclude_ids: set[str] | None = None,
+        retry_errors: bool = False,
     ) -> list[ExperimentRecord]:
         """Run all uncompleted (example, method) pairs and append to output_path.
 
@@ -236,6 +258,9 @@ class ExperimentRunner:
             exclude_ids: set of example_ids that must not be in examples
                 (e.g. dev IDs excluded from formal evaluation).  Raises ValueError
                 if any overlap is found — the caller must filter before running.
+            retry_errors: if True, re-run (example_id, method_id) pairs whose latest
+                attempt has status="error".  New records are appended with
+                attempt = previous_max + 1.  Old error records are never modified.
 
         Returns:
             List of newly created ExperimentRecords (does not include pre-existing ones).
@@ -251,7 +276,7 @@ class ExperimentRunner:
                 )
 
         # Merge retrieval params into a copy of model_settings for full traceability.
-        effective_ms: dict | None = dict(model_settings) if model_settings else {}
+        effective_ms: dict = dict(model_settings) if model_settings else {}
         effective_ms["_retrieval"] = {
             "m4_top_k": self.m4_top_k if self.m4_top_k is not None else self.top_k,
             "m5_top_k_per_claim": self.m5_top_k_per_claim if self.m5_top_k_per_claim is not None else self.top_k,
@@ -259,13 +284,18 @@ class ExperimentRunner:
             "query_include_question": self.query_include_question,
             "query_template": "question+nl+text" if self.query_include_question else "text_only",
         }
-        if not model_settings:
-            effective_ms = effective_ms  # keep as dict even if caller passed None
 
-        completed = load_completed(output_path)
+        completed = load_completed(output_path, retry_errors=retry_errors)
         dpath = drafts_path(output_path)
         draft_cache = load_draft_cache(dpath)
         new_records: list[ExperimentRecord] = []
+
+        # Pre-compute max attempt number per (example_id, method_id) for retry tracking.
+        attempt_map: dict[tuple, int] = {}
+        if retry_errors:
+            for rec in load_records(output_path):
+                key = (rec.example_id, rec.method_id)
+                attempt_map[key] = max(attempt_map.get(key, 0), rec.attempt)
 
         prompt_versions = _collect_prompt_versions([
             ("draft_port", self.draft_port),
@@ -286,11 +316,7 @@ class ExperimentRunner:
             # Get draft from cache or generate a new one.
             if eid in draft_cache:
                 cached = draft_cache[eid]
-                draft: Any = {
-                    "draft_id": cached["draft_id"],
-                    "short_answer": cached["short_answer"],
-                    "explanation": cached["explanation"],
-                }
+                draft: Any = _make_draft_obj(cached)
                 draft_usage: list[dict] = cached["draft_usage"]
             else:
                 try:
@@ -303,6 +329,7 @@ class ExperimentRunner:
                         if (eid, mid) in completed:
                             continue
                         rec = make_error_record(eid, mid, str(exc), question, effective_ms)
+                        rec.attempt = attempt_map.get((eid, mid), 0) + 1
                         rec.draft_usage = draft_usage
                         rec.prompt_versions = prompt_versions
                         rec.question_type = question_type
@@ -324,12 +351,15 @@ class ExperimentRunner:
             for mid in _METHOD_IDS:
                 if (eid, mid) in completed:
                     continue
+                attempt = attempt_map.get((eid, mid), 0) + 1
                 try:
                     method_fn = getattr(self, f"_run_{mid.lower()}")
                     rec = method_fn(example, draft, effective_ms)
+                    rec.attempt = attempt
                 except Exception as exc:
                     partial_usage = self._drain_usage()
                     rec = make_error_record(eid, mid, str(exc), question, effective_ms)
+                    rec.attempt = attempt
                     rec.usage = partial_usage
                     rec.raw_outputs = list(getattr(exc, "raw_outputs", None) or []) or None
                     rec.draft_usage = list(draft_usage)

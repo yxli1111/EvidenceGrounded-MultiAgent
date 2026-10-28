@@ -114,7 +114,7 @@ def compare_methods(
         paired_bootstrap_ci result dict with extra keys "method_a", "method_b",
         "metric", "mean_a", "mean_b", "n_failed_a", "n_failed_b".
     """
-    from .answer_metrics import exact_match, token_f1
+    from .answer_metrics import exact_match, token_f1, _gold_get
 
     def _get(obj, key):
         return obj[key] if isinstance(obj, dict) else getattr(obj, key, None)
@@ -125,7 +125,7 @@ def compare_methods(
         gold_entry = gold_lookup.get(eid)
         if not gold_entry:
             return 0.0
-        gold = gold_entry.get("gold_answer", "")
+        gold = _gold_get(gold_entry, "gold_answer", "")
         pred = _get(rec, "final_answer") or ""
         if metric == "f1":
             return token_f1(pred, gold)

@@ -103,7 +103,7 @@ Until `contracts/schemas.py` exists, E's runner uses a mock version in
 
 ---
 
-## GAP-3: Dev/eval split manifest (B)
+## GAP-3: Dev/eval split manifest (B) — partially resolved
 
 **Status:** Partially resolved.  Format confirmed; file pending from B.
 
@@ -113,7 +113,15 @@ Until `contracts/schemas.py` exists, E's runner uses a mock version in
 HotpotQA dev example IDs used during development (standard HotpotQA ID strings,
 e.g. `"5a8b57f25542995d1e6f1371"`).
 
-**Action required from B:** Commit `research/B_dev_50_ids.json` to the repo.
+**Status update:** `research/B_dev_50_ids.json` now exists in the repo (committed by B).
+Format confirmed: JSON object with `"example_ids"` list plus metadata fields
+(`dataset`, `split`, `selection`, `purpose`).  `load_id_manifest` now supports
+both the plain-list format and this object format.
+
+**Proposal (item 4):** The formal evaluation set should also have a fixed ID manifest
+(`research/eval_ids.json`, same object format as B_dev_50_ids.json) to ensure fully
+reproducible evaluation.  Owner: B + E jointly.  Once created, E will load it via
+`load_id_manifest` and pass it as `exclude_ids` to `runner.run()` on the dev run.
 
 **E's enforcement:** `src/evaluation/manifest.py` provides:
 ```python
@@ -123,6 +131,14 @@ runner.run(examples, out, exclude_ids=dev_ids)              # raises if overlap
 ```
 `run()` raises `ValueError` listing all overlapping IDs — it does NOT skip
 silently.  The caller must filter the example list before calling `run()`.
+
+**B's new contract-aligned interfaces (not yet on origin/feat/retrieval):**
+- `src.data.contract_loader.load_hotpotqa_contract(split, limit)` → `(list[QAInput], dict[id, QAGold])`
+- `src.retrieval.contract_adapter.ContractEvidenceRetriever`: accepts `list[Sentence]`, returns `list[Evidence]`
+  — plug directly into runner as `retrieve_port`, no `BRetrievalAdapter` needed
+
+**B's old `EvidenceRetriever`** (dict-based): still requires `BRetrievalAdapter`.
+`BRetrievalAdapter` docstring now documents this distinction explicitly.
 
 **M5 evidence mapping contract:**  `evidence_by_claim` passed to D's
 `verify_claims()` is `dict[str, list]` keyed by `claim_id`.  Every claim_id

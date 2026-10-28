@@ -402,6 +402,109 @@ class TestSentencesToContextDicts:
 
 
 # ---------------------------------------------------------------------------
+# ContractEvidenceRetriever used DIRECTLY (no BRetrievalAdapter wrapper)
+# ---------------------------------------------------------------------------
+
+class TestContractEvidenceRetrieverDirect:
+    """B's ContractEvidenceRetriever (Sentence→Evidence) plugs straight into runner.
+
+    BRetrievalAdapter is only for B's old dict-based EvidenceRetriever.
+    ContractEvidenceRetriever already accepts list[Sentence] and returns
+    list[Evidence], so no adapter is needed.
+    """
+
+    def test_contract_retriever_m4_and_m5_run_ok(self, tmp_path):
+        """A retriever that accepts Sentence objects and returns Evidence objects
+        must work directly as runner's retrieve_port with no adapter."""
+        from src.runner.mocks import (
+            MockClaimsPort,
+            MockDraftPort,
+            MockEvidence,
+            MockLLMClient,
+            MockVerificationPort,
+            make_synthetic_example,
+        )
+        from src.runner.records import load_records
+        from src.runner.runner import ExperimentRunner
+
+        class ContractLikeRetriever:
+            """Simulates B's ContractEvidenceRetriever interface."""
+            def retrieve(self, query: str, context, top_k: int):
+                results = []
+                for i, sent in enumerate(list(context)[:top_k], start=1):
+                    # Access via .title, .sentence_id, .text — Sentence attributes
+                    results.append(MockEvidence(
+                        doc_title=sent.title,
+                        sentence_id=sent.sentence_id,
+                        text=sent.text,
+                        score=round(1.0 / i, 4),
+                        retrieval_query=query,
+                        rank=i,
+                    ))
+                return results
+
+        runner = ExperimentRunner(
+            draft_port=MockDraftPort(),
+            retrieve_port=ContractLikeRetriever(),  # direct, no BRetrievalAdapter
+            claims_port=MockClaimsPort(),
+            verification_port=MockVerificationPort(),
+            llm=MockLLMClient(),
+            top_k=2,
+        )
+        out = str(tmp_path / "out.jsonl")
+        runner.run([make_synthetic_example("e1")], out)
+        records = {r.method_id: r for r in load_records(out)}
+
+        assert records["M4"].status == "ok", f"M4 failed: {records['M4'].error}"
+        assert records["M5"].status == "ok", f"M5 failed: {records['M5'].error}"
+
+    def test_contract_retriever_evidence_fields_preserved(self, tmp_path):
+        """Evidence objects returned by ContractLikeRetriever must be serialised
+        into records correctly (doc_title, sentence_id, score, rank)."""
+        from src.runner.mocks import (
+            MockClaimsPort,
+            MockDraftPort,
+            MockEvidence,
+            MockLLMClient,
+            MockVerificationPort,
+            make_synthetic_example,
+        )
+        from src.runner.records import load_records
+        from src.runner.runner import ExperimentRunner
+
+        class ContractLikeRetriever:
+            def retrieve(self, query, context, top_k):
+                sent = list(context)[0]
+                return [MockEvidence(
+                    doc_title=sent.title,
+                    sentence_id=sent.sentence_id,
+                    text=sent.text,
+                    score=0.99,
+                    retrieval_query=query,
+                    rank=1,
+                )]
+
+        runner = ExperimentRunner(
+            draft_port=MockDraftPort(),
+            retrieve_port=ContractLikeRetriever(),
+            claims_port=MockClaimsPort(),
+            verification_port=MockVerificationPort(),
+            llm=MockLLMClient(),
+            top_k=1,
+        )
+        out = str(tmp_path / "out.jsonl")
+        runner.run([make_synthetic_example("e1")], out)
+        records = {r.method_id: r for r in load_records(out)}
+
+        m4_ev = records["M4"].evidence
+        assert len(m4_ev) >= 1
+        ev = m4_ev[0]
+        assert "doc_title" in ev
+        assert "score" in ev
+        assert ev["score"] == pytest.approx(0.99)
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 

@@ -23,10 +23,13 @@
 | `tests/test_evaluation_*.py` | Unit tests for evaluation modules |
 | `tests/test_runner_e2e.py` | End-to-end runner tests including fatal errors, raw_outputs, question_type |
 | `tests/test_runner_usage_wrapper.py` | 13 tests for UsageWrapper |
-| `tests/test_runner_adapters.py` | 18 adapter tests (skipped when contracts not installed) |
+| `tests/test_runner_adapters.py` | 20+ adapter tests (skipped when contracts not installed) |
 | `tests/test_runner_params.py` | 16 tests for configurable retrieval params (m4_top_k, budget, etc.) |
-| `src/evaluation/manifest.py` | `load_id_manifest` + `assert_disjoint` for dev/eval isolation |
-| `tests/test_evaluation_manifest.py` | 11 tests for manifest utilities |
+| `src/evaluation/manifest.py` | `load_id_manifest` (2 formats) + `assert_disjoint` + `filter_out_ids` |
+| `tests/test_evaluation_manifest.py` | Tests for manifest utilities including B's object format |
+| `tests/test_evaluation_gold_object.py` | Tests for QAGold object support in evaluation functions |
+| `tests/test_runner_draft_object.py` | Tests for draft-as-object on resume |
+| `tests/test_runner_retry.py` | Tests for retry_errors, latest_records, attempt field |
 
 ---
 
@@ -51,9 +54,14 @@ must satisfy the corresponding `typing.Protocol` defined in
 ```python
 from src.runner.runner import ExperimentRunner
 
-from src.evaluation.manifest import load_id_manifest, assert_disjoint
+from src.evaluation.manifest import load_id_manifest, assert_disjoint, filter_out_ids
 
-dev_ids = load_id_manifest("research/B_dev_50_ids.json")   # B must provide this file
+# B_dev_50_ids.json uses object format: {"example_ids": [...], "dataset": ..., ...}
+dev_ids = load_id_manifest("research/B_dev_50_ids.json")
+
+# Remove dev examples from evaluation set before running
+eval_examples, n_removed = filter_out_ids(all_examples, dev_ids)
+assert_disjoint(dev_ids, {ex.example_id for ex in eval_examples})
 
 runner = ExperimentRunner(
     draft_port=YourDraftPort(),          # implements DraftPort
@@ -71,17 +79,45 @@ runner = ExperimentRunner(
 assert_disjoint(dev_ids, eval_ids)       # raise if dev examples leak into eval set
 
 records = runner.run(
-    examples,          # list of objects with .example_id, .question, .context
+    eval_examples,     # list of objects with .example_id, .question, .context
     "output.jsonl",    # checkpoint path — safe to resume if interrupted
     model_settings={"model": "openai/gpt-4o", "temperature": 0.0},
-    exclude_ids=dev_ids,  # raises ValueError if any example_id is in dev_ids
+    exclude_ids=dev_ids,      # raises ValueError if any example_id is in dev_ids
+    retry_errors=False,       # set True to retry (example_id, method_id) pairs
+                              # whose latest attempt has status="error"
 )
+
+# For accuracy metrics: only count the latest attempt per pair
+from src.runner.records import latest_records, load_records
+all_records = load_records("output.jsonl")
+latest = latest_records(all_records)   # deduped by (example_id, method_id)
+
+# For cost metrics: use ALL records so retry waste is included
+from src.evaluation.cost_metrics import aggregate_usage_by_method
+cost_all = aggregate_usage_by_method(all_records)      # total incl. retry waste
+cost_final = aggregate_usage_by_method(latest)          # final-attempt cost only
+# Retry waste per method ≈ cost_all[mid]["cost_usd_sum"] - cost_final[mid]["cost_usd_sum"]
 ```
 
 The runner writes one JSONL line per `(example_id, method_id)` pair.  If the
 output file already exists, completed pairs are skipped (idempotent resume).
 
 ---
+
+## Checkpoint resume and retry rules
+
+| Scenario | Behaviour |
+|----------|-----------|
+| Run interrupted mid-way | Resume: `runner.run(examples, out)` skips existing (eid, mid) pairs |
+| Method error, want retry | `runner.run(examples, out, retry_errors=True)` — re-runs pairs whose latest attempt is "error" |
+| Draft generation failed | With `retry_errors=True`, draft is re-generated (not in cache) |
+| Fatal error (credit, auth) | Raises immediately; partial records written; resume with `retry_errors=True` after fix |
+| Checking records | `latest_records(load_records(out))` — one record per (eid, mid), highest attempt |
+| Accuracy metrics | Always apply to `latest_records` — no double-counting |
+| Cost metrics | Apply to ALL records to capture retry waste; compare with `latest_records` for final-only cost |
+
+Retry records are **appended** — old records are never modified or deleted.  Each record has an
+`attempt` field (int, starts at 1) that increments with each retry.
 
 ## UsageWrapper limitations
 
@@ -135,8 +171,14 @@ If `drain_usage` is absent on the client, usage tracking is silently skipped
 re-derive it from `configs/model_pricing.json`; if the model is not in the
 pricing table the cost stays `None` (never fabricated).
 
-**GAP-4**: Please confirm the exact field names and types in `LLMResponse`
-so that `MockLLMUsage` in `src/runner/mocks.py` can be updated to match.
+**Usage field rules (item 7):**  C's `LLMUsage` uses `latency_seconds` (not `latency_ms`).
+E's `UsageWrapper` converts `latency_seconds → latency_ms` (× 1000) before storing
+in `ExperimentRecord.usage` entries so that `cost_metrics._accumulate` always
+sees `latency_ms`.  `cost_metrics._accumulate` also has a `latency_seconds` fallback
+(used when records were written without the wrapper).  All other fields (`cache_hit`,
+`input_tokens`, etc.) are stored verbatim.
+
+**GAP-4**: Resolved — C's LLMResponse confirmed from `feat/contracts-v0.1`.
 
 ---
 
@@ -152,10 +194,11 @@ provide a split file that can be loaded into this format.  Suggested schema:
 {"example_id": "hotpot_dev_0", "question": "...", "context": [...]}
 ```
 
-B must also provide `research/B_dev_50_ids.json` — a JSON list of the 50 dev
-example IDs used during development.  Format: `["hotpot_dev_0", ...]`.
+`research/B_dev_50_ids.json` exists (committed by B).  Format: JSON object
+with `"example_ids"` field (plus metadata: dataset, split, selection, purpose).
+`load_id_manifest` accepts this object format automatically.
 These IDs **must be excluded** from the formal evaluation set.  Use
-`load_id_manifest` + `exclude_ids` (see Quick Start above) to enforce this.
+`filter_out_ids` + `load_id_manifest` (see Quick Start above) to enforce this.
 
 M5 evidence mapping: `evidence_by_claim` is a `dict[str, list]` keyed by
 `claim_id` (every claim ID present, even if its list is empty due to a tight

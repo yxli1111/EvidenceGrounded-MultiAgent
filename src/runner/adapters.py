@@ -82,11 +82,15 @@ def b_example_to_contracts(b_dict: dict) -> tuple[str, str, list[dict]]:
 # ---------------------------------------------------------------------------
 
 class BRetrievalAdapter:
-    """Adapts B's EvidenceRetriever to E's RetrievePort interface.
+    """Adapts B's OLD dict-based EvidenceRetriever to E's RetrievePort interface.
 
-    B's retriever expects context as list[dict] with "title" key and returns
-    list[dict].  D's evidence_payload accesses evidence as objects (ev.doc_title,
-    ev.sentence_id, ev.text, ev.score, ev.rank, ev.retrieval_query).
+    Use this adapter ONLY for B's original `src.retrieval.retriever.EvidenceRetriever`
+    which expects context as list[dict] with "title" key and returns list[dict].
+
+    Do NOT wrap B's newer ContractEvidenceRetriever (src.retrieval.contract_adapter).
+    ContractEvidenceRetriever already accepts list[Sentence] and returns
+    list[contracts.schemas.Evidence] objects — it can be passed directly as
+    runner's retrieve_port without any adapter.
 
     This adapter:
     1. Converts Sentence objects / dicts → {title, sentence_id, text} dicts for B
