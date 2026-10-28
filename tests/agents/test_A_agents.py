@@ -242,5 +242,49 @@ class TestPortConformance(unittest.TestCase):
         self.assertEqual((cfg.model, cfg.temperature, cfg.max_tokens), ('m', 0.2, 512))
 
 
+
+class TestIntegrationAdapters(unittest.TestCase):
+    """Shapes seen in teammates' code: B's loader dicts, E's cached-draft dicts."""
+
+    def b_style_dict(self):
+        return {'example_id': BRIDGE_EXAMPLE.example_id, 'question': BRIDGE_EXAMPLE.question,
+                'question_type': 'bridge',
+                'context': [dataclasses.asdict(s) for s in BRIDGE_EXAMPLE.context]}
+
+    def test_dict_example_and_dict_draft_equal_dataclass_behaviour(self):
+        agent = A.AnswerAgent(CFG)
+        script = {A.STAGE_DRAFT: DRAFT_JSON, A.STAGE_CRITIC: CRITIC_JSON,
+                  A.STAGE_SELF_CHECK: CRITIC_JSON, A.STAGE_SELF_REVISE: REVISED_JSON}
+        l1, l2 = MockLLMClient(dict(script)), MockLLMClient(dict(script))
+        d_obj = agent.generate_draft(BRIDGE_EXAMPLE, l1)
+        d_dict = agent.generate_draft(self.b_style_dict(), l2)
+        self.assertEqual(d_obj, d_dict)
+        cached = dataclasses.asdict(d_obj)                    # what E re-reads from JSONL
+        self.assertEqual(agent.independent_critique(BRIDGE_EXAMPLE, d_obj, l1),
+                         agent.independent_critique(self.b_style_dict(), cached, l2))
+        self.assertEqual(agent.self_reflect(BRIDGE_EXAMPLE, d_obj, l1),
+                         agent.self_reflect(self.b_style_dict(), cached, l2))
+        self.assertEqual(l1.calls[0].messages, l2.calls[0].messages)
+
+    def test_bad_types_rejected(self):
+        with self.assertRaises(TypeError):
+            A.as_draft('not a draft')
+        with self.assertRaises(TypeError):
+            A.as_qa_input(['x'])
+
+    def test_prompt_version_alias_for_runner(self):
+        agent = A.AnswerAgent(CFG)
+        self.assertEqual(getattr(agent, 'prompt_version'), A.PROMPT_VERSIONS)
+
+    def test_self_reflect_with_feedback(self):
+        llm = MockLLMClient({A.STAGE_SELF_CHECK: CRITIC_JSON, A.STAGE_SELF_REVISE: REVISED_JSON})
+        fb, rev = A.AnswerAgent(CFG).self_reflect_with_feedback(BRIDGE_EXAMPLE, shared_draft(), llm)
+        self.assertEqual(len(llm.calls), 2)
+        self.assertEqual(fb.feedback_id, rev.feedback_id)
+        self.assertEqual(len(fb.items), 1)
+        self.assertIsNone(fb.items[0].label)
+        self.assertEqual(rev.final_answer, 'Gothenburg')
+
+
 if __name__ == '__main__':
     unittest.main()

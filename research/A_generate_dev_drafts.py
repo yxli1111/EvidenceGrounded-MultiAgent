@@ -32,9 +32,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from contracts.schemas import LLMResponse, QAInput, Sentence  # noqa: E402
+from contracts.schemas import LLMResponse, QAInput  # noqa: E402
 from src.agents.answer import (PROMPT_VERSIONS, AgentConfig, AgentOutputError,  # noqa: E402
-                               generate_draft, load_prompt, render_context)
+                               as_qa_input, generate_draft, load_prompt, render_context)
 
 DEFAULT_OUT_DIR = ROOT / 'results' / 'dev_drafts'
 
@@ -42,17 +42,8 @@ DEFAULT_OUT_DIR = ROOT / 'results' / 'dev_drafts'
 # --------------------------------------------------------------------------- adapters
 
 def to_qa_input(item: Any) -> QAInput:
-    """Accept B's loader output (dict today, QAInput later) and return a contract QAInput.
-
-    This is a format adapter only; loading/normalisation logic stays in B's loader.
-    """
-    if isinstance(item, QAInput):
-        return item
-    ctx = [s if isinstance(s, Sentence) else
-           Sentence(title=s['title'], sentence_id=int(s['sentence_id']), text=s['text'])
-           for s in item['context']]
-    return QAInput(example_id=str(item['example_id']), question=item['question'],
-                   context=ctx, question_type=item.get('question_type'))
+    """B's loader output (dict today, QAInput later) -> contract QAInput."""
+    return as_qa_input(item)
 
 
 def read_id_manifest(path: Path) -> list[str]:

@@ -40,6 +40,19 @@ record.prompt_versions.update(agent.prompt_versions)
 
 To keep M2's self-check feedback in `ExperimentRecord.feedback`, E can call `baselines.run_m2(example, draft, llm, config)`. It returns `draft`, `feedback` and `final` together.
 
+## Integration additions (v1.1)
+
+- `AnswerAgent` methods accept the contract dataclasses **or** the equivalent plain dicts. Today B's loader yields dict examples, and E's runner re-reads cached drafts as dicts. Use `as_qa_input` / `as_draft` in `src/agents/answer.py`.
+- `AnswerAgent.prompt_version` (alias of `prompt_versions`) is the attribute E's runner reads.
+- `AnswerAgent.self_reflect_with_feedback(example, draft, llm) -> (feedback, revision)`: M2 with the self-check kept (the same two calls). E can use it to fill `ExperimentRecord.feedback` for M2.
+- `research/A_generate_dev_drafts.py`: dev-only draft generation (B loader + C client, budget-capped, resumable). The first run (validation[:50], openai/gpt-4o-mini, draft_v1) gave 50/50 ok for USD 0.0155.
+
+### Offline integration rehearsal (E runner + real A + real D, scripted LLM)
+- A: draft, M2 and M3 critique all work, including on resume with E's cached dict drafts.
+- **E:** on resume the runner passes the cached draft to D's `revise_answer` as a dict, and D raises `'dict' object has no attribute 'draft_id'`. The runner should rebuild `AnswerDraft(**cached)` before calling ports. The runner's M2 record also hard-codes `items=[]`.
+- **B / E:** with B-style dict examples, D raises `'dict' object has no attribute 'context'`. Either B's loader returns `QAInput`, or E converts before calling ports.
+- **E / C:** E's mocks call `llm.generate(...)` positionally, but C's client and the contract are keyword-only. Real ports must call it with keywords.
+
 ## Behaviour guarantees (tested)
 
 - `draft_id = f"{example_id}:draft"` (reproducible). Only `QAInput` is accepted, and no function takes `QAGold`.

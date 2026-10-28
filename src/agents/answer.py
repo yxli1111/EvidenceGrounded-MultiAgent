@@ -250,10 +250,41 @@ def call_and_parse(llm: LLMClient, *, stage: str, messages: list[dict[str, str]]
                            f'{config.max_parse_repairs + 1} attempt(s): {last_err}', raw_outputs)
 
 
+# --------------------------------------------------------------------------- input adapters
+
+def as_qa_input(example: Any) -> QAInput:
+    """Return a contract ``QAInput``; also accepts the equivalent plain dict.
+
+    B's loader currently yields dicts, so A accepts both. This only changes the
+    container type. Field names and values must already follow the contract.
+    """
+    if isinstance(example, QAInput):
+        return example
+    if not isinstance(example, dict):
+        raise TypeError(f'expected QAInput or dict, got {type(example).__name__}')
+    ctx = [s if isinstance(s, Sentence) else
+           Sentence(title=s['title'], sentence_id=int(s['sentence_id']), text=s['text'])
+           for s in example['context']]
+    return QAInput(example_id=str(example['example_id']), question=example['question'],
+                   context=ctx, question_type=example.get('question_type'))
+
+
+def as_draft(draft: Any) -> AnswerDraft:
+    """Return a contract ``AnswerDraft``; also accepts the equivalent plain dict
+    (E's runner re-reads cached drafts from JSONL as dicts)."""
+    if isinstance(draft, AnswerDraft):
+        return draft
+    if not isinstance(draft, dict):
+        raise TypeError(f'expected AnswerDraft or dict, got {type(draft).__name__}')
+    return AnswerDraft(draft_id=str(draft['draft_id']), short_answer=draft['short_answer'],
+                       explanation=draft.get('explanation') or '')
+
+
 # --------------------------------------------------------------------------- draft
 
 def generate_draft(example: QAInput, llm: LLMClient, config: AgentConfig) -> AnswerDraft:
     """Create the shared initial draft for one example (one LLM call + optional repair)."""
+    example = as_qa_input(example)
     prompt = load_prompt('answer.draft')
     messages = prompt.render(question=example.question.strip(),
                              context=render_context(example.context))
@@ -281,15 +312,31 @@ class AnswerAgent:
     def prompt_versions(self) -> dict[str, str]:
         return dict(PROMPT_VERSIONS)
 
+    @property
+    def prompt_version(self) -> dict[str, str]:
+        """Alias read by E's runner (``getattr(draft_port, 'prompt_version')``)."""
+        return dict(PROMPT_VERSIONS)
+
     def generate_draft(self, example: QAInput, llm: LLMClient) -> AnswerDraft:
-        return generate_draft(example, llm, self.config)
+        return generate_draft(as_qa_input(example), llm, self.config)
 
     def self_reflect(self, example: QAInput, draft: AnswerDraft,
                      llm: LLMClient) -> RevisionResult:
         from .baselines import self_reflect
-        return self_reflect(example, draft, llm, self.config)
+        return self_reflect(as_qa_input(example), as_draft(draft), llm, self.config)
+
+    def self_reflect_with_feedback(self, example: QAInput, draft: AnswerDraft,
+                                   llm: LLMClient) -> tuple[VerificationFeedback, RevisionResult]:
+        """M2 with its self-check kept: returns (self-check feedback, revision).
+
+        Same two LLM calls as ``self_reflect``. Offered so E can store M2 feedback in
+        ExperimentRecord.feedback (HANDOFF_A issue 2); not part of the v0.1 port.
+        """
+        from .baselines import run_m2
+        out = run_m2(as_qa_input(example), as_draft(draft), llm, self.config)
+        return out.feedback, out.final
 
     def independent_critique(self, example: QAInput, draft: AnswerDraft,
                              llm: LLMClient) -> VerificationFeedback:
         from .independent_critic import independent_critique
-        return independent_critique(example, draft, llm, self.config)
+        return independent_critique(as_qa_input(example), as_draft(draft), llm, self.config)
