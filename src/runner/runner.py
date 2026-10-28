@@ -31,6 +31,7 @@ Integration notes
 from __future__ import annotations
 
 import pathlib
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -183,6 +184,8 @@ class ExperimentRunner:
         model_settings: dict | None = None,
         exclude_ids: set[str] | None = None,
         retry_errors: bool = False,
+        methods: list[str] | None = None,
+        progress_fn=None,
     ) -> list[ExperimentRecord]:
         """Run all uncompleted (example, method) pairs and append to output_path.
 
@@ -196,6 +199,12 @@ class ExperimentRunner:
             retry_errors: if True, re-run (example_id, method_id) pairs whose latest
                 attempt has status="error".  New records are appended with
                 attempt = previous_max + 1.  Old error records are never modified.
+            methods: if given, only run the listed method IDs (e.g. ["M3","M4","M5"]).
+                Defaults to None (run all five methods).
+            progress_fn: optional callable invoked after every processed example.
+                Signature: (idx: int, total: int, example_id: str,
+                            example_records: list[ExperimentRecord],
+                            elapsed_seconds: float) -> None.
 
         Returns:
             List of newly created ExperimentRecords (does not include pre-existing ones).
@@ -240,10 +249,15 @@ class ExperimentRunner:
         else:
             effective_llm = UsageWrapper(self.llm, raw_calls_path=raw_calls_path)
 
+        method_ids = [m for m in _METHOD_IDS if methods is None or m in methods]
+
         completed = load_completed(output_path, retry_errors=retry_errors)
         dpath = drafts_path(output_path)
         draft_cache = load_draft_cache(dpath)
         new_records: list[ExperimentRecord] = []
+
+        start_time = time.monotonic()
+        example_idx = 0
 
         # Pre-compute max attempt number per (example_id, method_id) for retry tracking.
         attempt_map: dict[tuple, int] = {}
@@ -264,9 +278,11 @@ class ExperimentRunner:
             question = _attr(example, "question", "")
             question_type = _attr(example, "question_type")
 
-            # Skip the whole example if all 5 methods are already complete.
-            if all((eid, mid) in completed for mid in _METHOD_IDS):
+            # Skip the whole example if all requested methods are already complete.
+            if all((eid, mid) in completed for mid in method_ids):
                 continue
+
+            example_new: list[ExperimentRecord] = []
 
             # Set context for raw call logging
             if hasattr(effective_llm, "set_context"):
@@ -284,7 +300,7 @@ class ExperimentRunner:
                 except Exception as exc:
                     draft_usage = self._drain_usage(effective_llm)
                     is_fatal = type(exc).__name__ in _FATAL_ERROR_TYPES
-                    for mid in _METHOD_IDS:
+                    for mid in method_ids:
                         if (eid, mid) in completed:
                             continue
                         rec = make_error_record(eid, mid, str(exc), question, effective_ms)
@@ -295,7 +311,14 @@ class ExperimentRunner:
                         rec.raw_outputs = list(getattr(exc, "raw_outputs", None) or []) or None
                         rec.raw_calls_path = raw_calls_path
                         append_record(output_path, rec)
-                        new_records.append(rec)
+                        example_new.append(rec)
+                    new_records.extend(example_new)
+                    if progress_fn is not None:
+                        progress_fn(
+                            example_idx, len(examples), eid, example_new,
+                            time.monotonic() - start_time,
+                        )
+                    example_idx += 1
                     if is_fatal:
                         raise
                     continue
@@ -308,7 +331,7 @@ class ExperimentRunner:
                     "draft_usage": draft_usage,
                 }
 
-            for mid in _METHOD_IDS:
+            for mid in method_ids:
                 if (eid, mid) in completed:
                     continue
                 attempt = attempt_map.get((eid, mid), 0) + 1
@@ -333,8 +356,9 @@ class ExperimentRunner:
                     rec.question_type = question_type
                     rec.raw_calls_path = raw_calls_path
                     append_record(output_path, rec)
-                    new_records.append(rec)
+                    example_new.append(rec)
                     if type(exc).__name__ in _FATAL_ERROR_TYPES:
+                        new_records.extend(example_new)
                         raise
                     continue
 
@@ -343,7 +367,15 @@ class ExperimentRunner:
                 rec.question_type = question_type
                 rec.raw_calls_path = raw_calls_path
                 append_record(output_path, rec)
-                new_records.append(rec)
+                example_new.append(rec)
+
+            new_records.extend(example_new)
+            if progress_fn is not None:
+                progress_fn(
+                    example_idx, len(examples), eid, example_new,
+                    time.monotonic() - start_time,
+                )
+            example_idx += 1
 
         return new_records
 

@@ -606,3 +606,155 @@ class TestQuestionType:
         records = load_records(output_file)
         for rec in records:
             assert rec.question_type == "factoid"
+
+
+# ---------------------------------------------------------------------------
+# Issue 1: all-records summary — CSV has full rows after retry
+# ---------------------------------------------------------------------------
+
+class TestAllRecordsSummaryAfterRetry:
+    def test_per_example_csv_has_all_rows_after_retry(self, ports, output_file, tmp_path):
+        """Loading all records from file after retry yields 15-row CSV (3 examples × 5 methods)."""
+        import csv as _csv
+        from src.evaluation.answer_metrics import export_per_example_csv
+
+        examples = [make_synthetic_example(f"e{i:02d}") for i in range(3)]
+        gold_lookup = {ex.example_id: {"gold_answer": "The mock answer."} for ex in examples}
+
+        class FailingM4(MockVerificationPort):
+            def __init__(self):
+                self.fail = True
+
+            def verify_draft(self, *a, **k):
+                if self.fail:
+                    raise RuntimeError("M4 fails first run")
+                return super().verify_draft(*a, **k)
+
+        fail_port = FailingM4()
+        ports_run1 = dict(ports)
+        ports_run1["verification_port"] = fail_port
+        runner1 = ExperimentRunner(**ports_run1, top_k=3)
+        runner1.run(examples, output_file)
+
+        # After first run: 15 records (3 × 5, including 3 M4 errors)
+        all_recs = load_records(output_file)
+        assert len(all_recs) == 15
+
+        # Fix M4 and retry
+        fail_port.fail = False
+        runner2 = ExperimentRunner(**ports_run1, top_k=3)
+        runner2.run(examples, output_file, retry_errors=True)
+
+        # After retry: 15 original + 3 new M4 success records = 18
+        all_recs_after = load_records(output_file)
+        assert len(all_recs_after) == 18
+
+        # CSV uses latest_records → 15 unique pairs; M4 rows show "ok"
+        csv_path = str(tmp_path / "per_example.csv")
+        export_per_example_csv(all_recs_after, gold_lookup, csv_path)
+
+        with open(csv_path, newline="", encoding="utf-8") as f:
+            rows = list(_csv.DictReader(f))
+
+        assert len(rows) == 15, f"Expected 15 CSV rows, got {len(rows)}"
+        m4_rows = [r for r in rows if r["method_id"] == "M4"]
+        assert len(m4_rows) == 3
+        assert all(r["status"] == "ok" for r in m4_rows), "M4 rows must be ok after retry"
+
+
+# ---------------------------------------------------------------------------
+# Issue 3: methods filter
+# ---------------------------------------------------------------------------
+
+class TestMethodsFilter:
+    def test_only_specified_methods_run(self, ports, output_file):
+        example = make_synthetic_example("e_methods")
+        runner = ExperimentRunner(**ports, top_k=3)
+        records = runner.run([example], output_file, methods=["M1", "M3"])
+        assert {r.method_id for r in records} == {"M1", "M3"}
+        assert len(records) == 2
+
+    def test_methods_none_runs_all_five(self, ports, output_file):
+        example = make_synthetic_example("e_methods_all")
+        runner = ExperimentRunner(**ports, top_k=3)
+        records = runner.run([example], output_file, methods=None)
+        assert {r.method_id for r in records} == set(METHOD_IDS)
+
+    def test_methods_filter_respected_in_skip_check(self, ports, output_file):
+        """Running only M1 on a file that already has M1 produces zero new records."""
+        example = make_synthetic_example("e_skip_check")
+        runner = ExperimentRunner(**ports, top_k=3)
+        runner.run([example], output_file, methods=["M1"])
+        new = runner.run([example], output_file, methods=["M1"])
+        assert new == [], "Second run of M1 only should add no records"
+
+    def test_methods_filter_on_multiple_examples(self, ports, output_file):
+        examples = [make_synthetic_example(f"e{i:02d}") for i in range(3)]
+        runner = ExperimentRunner(**ports, top_k=3)
+        records = runner.run(examples, output_file, methods=["M4", "M5"])
+        assert {r.method_id for r in records} == {"M4", "M5"}
+        assert len(records) == 6  # 3 examples × 2 methods
+
+
+# ---------------------------------------------------------------------------
+# Issue 4: progress callback
+# ---------------------------------------------------------------------------
+
+class TestProgressCallback:
+    def test_progress_fn_called_once_per_processed_example(self, ports, output_file):
+        examples = [make_synthetic_example(f"e{i:02d}") for i in range(3)]
+        runner = ExperimentRunner(**ports, top_k=3)
+        calls = []
+        runner.run(examples, output_file, progress_fn=lambda *a: calls.append(a))
+        assert len(calls) == 3
+
+    def test_progress_fn_not_called_for_skipped_examples(self, ports, output_file):
+        """Examples already complete (all methods done) are skipped without calling progress_fn."""
+        examples = [make_synthetic_example("e_skip_prog")]
+        runner = ExperimentRunner(**ports, top_k=3)
+        runner.run(examples, output_file)  # completes all 5 methods
+        calls = []
+        runner.run(examples, output_file, progress_fn=lambda *a: calls.append(a))
+        assert calls == [], "No progress calls when example is already complete"
+
+    def test_progress_fn_receives_correct_idx_and_total(self, ports, output_file):
+        examples = [make_synthetic_example(f"e{i:02d}") for i in range(3)]
+        runner = ExperimentRunner(**ports, top_k=3)
+        captured = []
+
+        def _fn(idx, total, eid, recs, elapsed):
+            captured.append((idx, total))
+
+        runner.run(examples, output_file, progress_fn=_fn)
+        assert captured == [(0, 3), (1, 3), (2, 3)]
+
+    def test_progress_fn_receives_elapsed_seconds(self, ports, output_file):
+        example = make_synthetic_example("e_elapsed")
+        runner = ExperimentRunner(**ports, top_k=3)
+        elapsed_vals = []
+        runner.run([example], output_file,
+                   progress_fn=lambda idx, tot, eid, recs, el: elapsed_vals.append(el))
+        assert len(elapsed_vals) == 1
+        assert elapsed_vals[0] >= 0.0
+
+    def test_progress_fn_receives_example_records(self, ports, output_file):
+        example = make_synthetic_example("e_prog_recs")
+        runner = ExperimentRunner(**ports, top_k=3)
+        all_recs = []
+        runner.run([example], output_file,
+                   progress_fn=lambda idx, tot, eid, recs, el: all_recs.extend(recs))
+        assert len(all_recs) == 5  # one for each method
+
+    def test_progress_fn_called_on_draft_failure(self, ports, output_file):
+        """progress_fn is called even when generate_draft fails."""
+        example = make_synthetic_example("e_prog_draftfail")
+
+        class DraftFails(MockDraftPort):
+            def generate_draft(self, *a, **k):
+                raise RuntimeError("draft fails")
+
+        ports["draft_port"] = DraftFails()
+        runner = ExperimentRunner(**ports, top_k=3)
+        calls = []
+        runner.run([example], output_file, progress_fn=lambda *a: calls.append(a))
+        assert len(calls) == 1, "progress_fn must be called even when draft fails"
