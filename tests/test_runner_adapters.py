@@ -514,6 +514,67 @@ class TestContractEvidenceRetrieverDirect:
 
 
 # ---------------------------------------------------------------------------
+# ContractEvidenceRetriever-style port used directly (no BRetrievalAdapter)
+# ---------------------------------------------------------------------------
+
+class TestContractRetrieverDirectly:
+    """ContractEvidenceRetriever accepts Sentence objects (attribute access) and is
+    passed directly to ExperimentRunner without BRetrievalAdapter wrapping.
+
+    Regression: BRetrievalAdapter was converting Sentences to dicts before passing
+    to ContractEvidenceRetriever, which then tried s.title on a dict → AttributeError.
+    Fix: ContractEvidenceRetriever is used directly.
+    """
+
+    def test_m4_m5_with_attribute_access_retriever(self):
+        """Retriever using sentence.title (not dict key) works directly as retrieve_port."""
+        pytest.importorskip("contracts.schemas")
+        from contracts.schemas import QAInput, Sentence
+        from src.runner.runner import ExperimentRunner
+        from src.runner.mocks import MockDraftPort, MockClaimsPort, MockVerificationPort, MockLLMClient
+
+        received_contexts: list = []
+
+        class ContractStyleRetriever:
+            """Mimics ContractEvidenceRetriever: uses attribute access on Sentence objects."""
+            def retrieve(self, query, context, top_k):
+                received_contexts.append([(s.title, s.sentence_id, s.text) for s in context])
+                return []
+
+        examples = [
+            QAInput(
+                example_id="attr_e1",
+                question="Who founded Rome?",
+                context=[Sentence("Rome", 0, "Rome was founded by Romulus.")],
+            )
+        ]
+
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "records.jsonl")
+            runner = ExperimentRunner(
+                draft_port=MockDraftPort(),
+                retrieve_port=ContractStyleRetriever(),
+                claims_port=MockClaimsPort(),
+                verification_port=MockVerificationPort(),
+                llm=MockLLMClient(),
+                top_k=3,
+                m4_top_k=3,
+                m5_top_k_per_claim=3,
+            )
+            records = runner.run(examples, out, model_settings={"model": "mock"})
+
+        m4 = next(r for r in records if r.method_id == "M4")
+        m5 = next(r for r in records if r.method_id == "M5")
+        # Neither M4 nor M5 should fail with 'dict has no attribute title'
+        assert m4.status == "ok", f"M4 error: {m4.error}"
+        assert m5.status == "ok", f"M5 error: {m5.error}"
+        # Retriever was called with Sentence objects — attribute access worked
+        assert len(received_contexts) > 0
+        assert received_contexts[0] == [("Rome", 0, "Rome was founded by Romulus.")]
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 

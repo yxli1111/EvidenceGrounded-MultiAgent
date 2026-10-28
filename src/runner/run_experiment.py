@@ -71,11 +71,11 @@ def main() -> None:
     print()
 
     if args.dry_run:
-        records, gold_lookup = _run_dry(args, records_path)
+        records, gold_lookup, n_dev_excluded = _run_dry(args, records_path)
     else:
-        records, gold_lookup = _run_real(args, records_path)
+        records, gold_lookup, n_dev_excluded = _run_real(args, records_path)
 
-    _write_outputs(records, gold_lookup, out_dir)
+    _write_outputs(records, gold_lookup, out_dir, args, n_dev_excluded)
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +127,7 @@ def _run_dry(args, records_path):
         retry_errors=args.retry_errors,
     )
     print("[DRY RUN] No API calls made. Schema verified.")
-    return records, gold_lookup
+    return records, gold_lookup, 0
 
 
 # ---------------------------------------------------------------------------
@@ -144,7 +144,7 @@ def _run_real(args, records_path):
         import src.verification as _verification_module
         import src.agents.revision as _revision_module
         from src.agents.answer import AnswerAgent, AgentConfig
-        from src.runner.adapters import AAnswerAdapter, BRetrievalAdapter, DVerificationAdapter
+        from src.runner.adapters import AAnswerAdapter, DVerificationAdapter
         from src.runner.runner import ExperimentRunner
     except ImportError as exc:
         print(f"ERROR: missing dependency — {exc}")
@@ -203,7 +203,7 @@ def _run_real(args, records_path):
     agent_config = AgentConfig(model=args.model)
     draft_port = AAnswerAdapter(AnswerAgent(agent_config))
 
-    retrieve_port = BRetrievalAdapter(ContractEvidenceRetriever())
+    retrieve_port = ContractEvidenceRetriever()
 
     claims_port = AtomicClaimExtractor()
 
@@ -233,17 +233,17 @@ def _run_real(args, records_path):
         model_settings={"model": args.model, "temperature": 0.0},
         retry_errors=args.retry_errors,
     )
-    return records, gold_lookup
+    return records, gold_lookup, n_removed
 
 
 # ---------------------------------------------------------------------------
 # Post-run outputs
 # ---------------------------------------------------------------------------
 
-def _write_outputs(records, gold_lookup, out_dir: pathlib.Path) -> None:
+def _write_outputs(records, gold_lookup, out_dir: pathlib.Path, args, n_dev_excluded: int = 0) -> None:
     from src.runner.records import latest_records
     from src.evaluation.answer_metrics import exact_match, token_f1, export_per_example_csv
-    from src.evaluation.cost_metrics import aggregate_usage_by_method, estimate_budget
+    from src.evaluation.cost_metrics import aggregate_usage_by_method, aggregate_draft_usage, estimate_budget
 
     latest = latest_records(records)
 
@@ -280,7 +280,7 @@ def _write_outputs(records, gold_lookup, out_dir: pathlib.Path) -> None:
         f1 = sum(f1_vals) / len(f1_vals) if f1_vals else float("nan")
 
         cs = cost_stats.get(mid, {})
-        n_calls = cs.get("n_calls", 0)
+        n_calls = cs.get("llm_calls", 0)
         cost = cs.get("cost_usd_sum") or 0.0
         cost_summary[mid] = cs
 
@@ -288,29 +288,63 @@ def _write_outputs(records, gold_lookup, out_dir: pathlib.Path) -> None:
         f1_s = f"{f1:.3f}" if f1 == f1 else "  n/a"
         print(f"{mid:<6} {len(recs):>4} {n_ok:>4}  {em_s:>6}  {f1_s:>6}  {n_calls:>5}  {cost:>9.4f}")
 
-    total = sum((cost_summary.get(m, {}).get("cost_usd_sum") or 0.0) for m in ["M1","M2","M3","M4","M5"])
-    print(f"\nTotal cost (final attempts): ${total:.4f} USD")
+    method_total = sum((cost_summary.get(m, {}).get("cost_usd_sum") or 0.0) for m in ["M1","M2","M3","M4","M5"])
+    print(f"\nTotal method cost (final attempts, excl. draft): ${method_total:.4f} USD")
 
-    # Budget projections
+    # Draft cost and per-example breakdown
+    draft_stats = aggregate_draft_usage(latest)
+    n_ex = draft_stats.get("n_examples", 0)
+    draft_total = draft_stats.get("cost_usd_sum") or 0.0
+    draft_per_ex = draft_total / n_ex if n_ex > 0 else 0.0
+
+    print("\n=== Per-example cost breakdown ===")
+    print(f"  Draft (shared)   : ${draft_per_ex:.5f}/example")
+    method_per_ex_sum = 0.0
+    for mid in ["M1", "M2", "M3", "M4", "M5"]:
+        per_ex = (cost_summary.get(mid) or {}).get("per_example_cost_usd")
+        if per_ex is not None:
+            method_per_ex_sum += per_ex
+            print(f"  {mid}              : ${per_ex:.5f}/example")
+        else:
+            print(f"  {mid}              :       n/a")
+    pipeline_per_ex = draft_per_ex + method_per_ex_sum
+    print(f"  Full pipeline    : ${pipeline_per_ex:.5f}/example  (draft + M1–M5)")
+
+    # Budget projections (total_estimated_cost_usd already includes draft)
     if latest:
-        print("\n=== Budget estimates ===")
-        est = estimate_budget(records, target_n_examples=50)
+        print("\n=== Budget estimates (draft + methods) ===")
+        est50  = estimate_budget(records, target_n_examples=50)
         est100 = estimate_budget(records, target_n_examples=100)
         est200 = estimate_budget(records, target_n_examples=200)
-        for label, e in [("N=50", est), ("N=100", est100), ("N=200", est200)]:
+        for label, e in [("N=50 ", est50), ("N=100", est100), ("N=200", est200)]:
             total_est = e.get("total_estimated_cost_usd")
-            if total_est is not None:
-                print(f"  {label}: ${total_est:.3f} USD (all methods)")
+            draft_est = (e.get("draft") or {}).get("estimated_cost_usd")
+            total_s  = f"${total_est:.3f}" if total_est is not None else "  n/a"
+            draft_s  = f"${draft_est:.3f}" if draft_est is not None else "  n/a"
+            print(f"  {label}: {total_s} total  (incl. draft {draft_s})")
         print()
         for mid in ["M1", "M2", "M3", "M4", "M5"]:
-            for label, e in [("N=50", est), ("N=100", est100), ("N=200", est200)]:
-                mid_est = (e.get("methods") or {}).get(mid, {}).get("estimated_cost_usd")
-                if mid_est is not None:
-                    print(f"  {mid} {label}: ${mid_est:.4f}")
+            parts = []
+            for label, e in [("N=50", est50), ("N=100", est100), ("N=200", est200)]:
+                v = (e.get("methods") or {}).get(mid, {}).get("estimated_cost_usd")
+                parts.append(f"{label}=${v:.4f}" if v is not None else f"{label}=n/a")
+            print(f"  {mid}: {' | '.join(parts)}")
 
-    # Per-example CSV + metadata.json
+    # Per-example CSV + metadata.json (with full run context)
     csv_path = str(out_dir / "per_example.csv")
-    export_per_example_csv(latest, gold_lookup, csv_path, preliminary=True, split="validation")
+    run_meta = {
+        "model": args.model,
+        "query_include_question": args.query_include_question,
+        "m4_top_k": 5,
+        "m5_top_k_per_claim": 5,
+        "n_dev_excluded": n_dev_excluded,
+        "run_timestamp": _now_tag(),
+    }
+    export_per_example_csv(
+        latest, gold_lookup, csv_path,
+        preliminary=True, split="validation",
+        extra_meta=run_meta,
+    )
 
     # cost_summary.json
     cost_path = out_dir / "cost_summary.json"

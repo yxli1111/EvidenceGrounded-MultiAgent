@@ -327,6 +327,7 @@ class ExperimentRunner:
                     rec.attempt = attempt
                     rec.usage = partial_usage
                     rec.raw_outputs = list(getattr(exc, "raw_outputs", None) or []) or None
+                    rec.draft = ser_draft(draft)
                     rec.draft_usage = list(draft_usage)
                     rec.prompt_versions = prompt_versions
                     rec.question_type = question_type

@@ -367,21 +367,55 @@ class TestExportPerExampleCsvNewFormat:
         assert meta.exists(), "metadata.json must be created alongside CSV"
         data = json.loads(meta.read_text())
         assert data["preliminary"] is True
-        assert "n" in data
+        assert "n_examples" in data, "metadata.json must have n_examples (unique question count)"
+        assert "n_records" in data,  "metadata.json must have n_records (unique pair count)"
 
-    def test_metadata_json_n_reflects_deduped_count(self, tmp_path):
-        """metadata.json n equals the number of deduped rows written."""
+    def test_metadata_json_n_examples_counts_unique_examples(self, tmp_path):
+        """n_examples = unique question count; n_records = unique (example, method) pairs."""
+        import json
+        from src.evaluation.answer_metrics import export_per_example_csv
+        out = str(tmp_path / "out.csv")
+        records = [
+            self._rec("e1", "M1", "Paris", "Paris"),
+            self._rec("e1", "M2", "Paris", "Paris"),
+            self._rec("e2", "M1", "Berlin", "Berlin"),
+        ]
+        gold = {"e1": {"gold_answer": "Paris"}, "e2": {"gold_answer": "Berlin"}}
+        export_per_example_csv(records, gold, output_path=out)
+        meta = json.loads((tmp_path / "metadata.json").read_text())
+        assert meta["n_examples"] == 2, "3 records across 2 examples → n_examples=2"
+        assert meta["n_records"]  == 3, "3 unique (example,method) pairs → n_records=3"
+
+    def test_metadata_json_dedup_affects_n_records(self, tmp_path):
+        """n_records counts deduped (example, method) pairs; retries are not double-counted."""
         import json
         from src.evaluation.answer_metrics import export_per_example_csv
         out = str(tmp_path / "out.csv")
         records = [
             self._rec("e1", "M1", "Wrong", "Wrong", attempt=1),
-            self._rec("e1", "M1", "Paris", "Paris", attempt=2),  # duplicate
+            self._rec("e1", "M1", "Paris", "Paris", attempt=2),  # retry
         ]
         gold = {"e1": {"gold_answer": "Paris"}}
         export_per_example_csv(records, gold, output_path=out)
         meta = json.loads((tmp_path / "metadata.json").read_text())
-        assert meta["n"] == 1  # deduped
+        assert meta["n_examples"] == 1
+        assert meta["n_records"]  == 1  # deduped to 1 unique pair
+
+    def test_extra_meta_merged_into_metadata_json(self, tmp_path):
+        """extra_meta dict is merged into metadata.json."""
+        import json
+        from src.evaluation.answer_metrics import export_per_example_csv
+        out = str(tmp_path / "out.csv")
+        records = [self._rec("e1", "M1", "Paris", "Paris")]
+        gold = {"e1": {"gold_answer": "Paris"}}
+        export_per_example_csv(
+            records, gold, output_path=out,
+            extra_meta={"model": "gpt-4o-mini", "m4_top_k": 5, "run_timestamp": "t0"},
+        )
+        meta = json.loads((tmp_path / "metadata.json").read_text())
+        assert meta.get("model") == "gpt-4o-mini"
+        assert meta.get("m4_top_k") == 5
+        assert meta.get("run_timestamp") == "t0"
 
     def test_dedup_keeps_highest_attempt_in_csv(self, tmp_path):
         """Two attempts for same (eid, mid); only highest attempt row in CSV."""

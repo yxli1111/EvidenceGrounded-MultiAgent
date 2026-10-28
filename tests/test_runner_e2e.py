@@ -406,6 +406,47 @@ class TestErrorRecordPreservesUsage:
 
 
 # ---------------------------------------------------------------------------
+# Error records preserve draft (draft was generated before method failure)
+# ---------------------------------------------------------------------------
+
+class TestErrorRecordPreservesDraft:
+    def test_error_record_has_draft_when_method_fails(self, ports, output_file):
+        """Draft is preserved on error records when the failure happens in the method step."""
+        example = make_synthetic_example("e_draft_preserve")
+
+        class FailsAfterDraft(MockVerificationPort):
+            def verify_draft(self, *a, **k):
+                raise RuntimeError("M4 verification failure")
+
+        ports["verification_port"] = FailsAfterDraft()
+        runner = ExperimentRunner(**ports, top_k=3)
+        runner.run([example], output_file)
+
+        records = {r.method_id: r for r in load_records(output_file)}
+        m4 = records["M4"]
+        assert m4.status == "error"
+        # draft should be preserved even though M4 failed
+        assert m4.draft is not None, "Error record must preserve draft when method step fails"
+        assert m4.draft.get("short_answer"), "Preserved draft must have short_answer"
+
+    def test_draft_absent_when_draft_generation_fails(self, ports, output_file):
+        """When generate_draft itself fails, error records correctly have draft=None."""
+        example = make_synthetic_example("e_no_draft")
+
+        class DraftFails(MockDraftPort):
+            def generate_draft(self, *a, **k):
+                raise RuntimeError("draft generation failed")
+
+        ports["draft_port"] = DraftFails()
+        runner = ExperimentRunner(**ports, top_k=3)
+        runner.run([example], output_file)
+
+        records = {r.method_id: r for r in load_records(output_file)}
+        for mid in ["M1", "M2", "M3", "M4", "M5"]:
+            assert records[mid].draft is None, f"{mid}: draft must be None when generate_draft fails"
+
+
+# ---------------------------------------------------------------------------
 # Issue 7: prompt_versions collected from port attributes
 # ---------------------------------------------------------------------------
 

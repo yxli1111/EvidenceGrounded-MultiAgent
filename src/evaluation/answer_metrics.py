@@ -197,6 +197,7 @@ def export_per_example_csv(
     omitted_metrics: list[str] | None = None,
     split: str | None = None,
     manifest: str | None = None,
+    extra_meta: dict | None = None,
 ) -> str:
     """Export per-example EM/F1 scores to a CSV file.
 
@@ -240,13 +241,23 @@ def export_per_example_csv(
     deduped = list(seen.values())
 
     # Write metadata.json alongside the CSV
-    meta: dict = {"preliminary": preliminary, "n": len(deduped)}
+    n_examples = len({
+        (rec.get("example_id", "") if isinstance(rec, dict) else getattr(rec, "example_id", ""))
+        for rec in deduped
+    })
+    meta: dict = {
+        "preliminary": preliminary,
+        "n_examples": n_examples,
+        "n_records": len(deduped),
+    }
     if omitted_metrics is not None:
         meta["omitted_metrics"] = omitted_metrics
     if split is not None:
         meta["split"] = split
     if manifest is not None:
         meta["manifest"] = manifest
+    if extra_meta:
+        meta.update(extra_meta)
     meta_path = out.parent / "metadata.json"
     meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
 
