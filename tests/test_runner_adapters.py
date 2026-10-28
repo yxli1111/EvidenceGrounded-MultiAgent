@@ -313,8 +313,8 @@ class TestAAnswerAdapter:
         assert callable(getattr(adapter, "run_m2", None)) or True  # soft: log state
 
     def test_run_m2_calls_baselines_with_config(self):
-        """AAnswerAdapter.run_m2 must pass agent.config as 4th positional arg."""
-        pytest.importorskip("contracts.schemas")
+        """AAnswerAdapter.run_m2 must pass real QAInput/AnswerDraft and agent.config as 4th arg."""
+        schemas = pytest.importorskip("contracts.schemas")
         pytest.importorskip("src.agents.baselines")
         from src.runner.adapters import AAnswerAdapter
 
@@ -357,7 +357,11 @@ class TestAAnswerAdapter:
 
             adapter = AAnswerAdapter(FakeAgent())
             if hasattr(adapter, "run_m2"):
-                adapter.run_m2("example", "draft", "llm")
+                qa = schemas.QAInput(example_id="e1", question="Who?", context=[])
+                ad = schemas.AnswerDraft(draft_id="d1", short_answer="X", explanation="E")
+                adapter.run_m2(qa, ad, "llm")
+                assert captured["args"][0] is qa
+                assert captured["args"][1] is ad
                 assert captured["args"][3] is FakeAgent.config
         finally:
             if original is None:

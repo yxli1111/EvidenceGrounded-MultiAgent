@@ -216,7 +216,9 @@ class AAnswerAdapter:
             _config = getattr(agent, "config", None)
 
             def run_m2(example: Any, draft: Any, llm: Any) -> Any:
-                return _baselines.run_m2(example, draft, llm, _config)
+                import sys as _sys
+                mod = _sys.modules.get("src.agents.baselines", _baselines)
+                return mod.run_m2(example, draft, llm, _config)
 
             self.run_m2 = run_m2  # bound only when baselines is importable
         except (ImportError, AttributeError):
