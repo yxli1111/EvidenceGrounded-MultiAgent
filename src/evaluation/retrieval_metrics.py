@@ -111,18 +111,18 @@ def mean_recall_at_k(
     """Aggregate Recall@k across all records for one method.
 
     Args:
-        records: list of ExperimentRecord dicts.  Records with
+        records: list of ExperimentRecord dicts or objects.  Records with
                  status != "ok" contribute 0 to the numerator but
                  are still counted in the denominator.
         gold_lookup: maps example_id -> QAGold dict.
         k: rank cutoff.
         method_id: only records with this method_id are processed.
+                   Passing method_id="M5" raises NotImplementedError because
+                   M5 evidence is keyed by claim_id and question-conditioned
+                   Recall@k does not have a valid semantic for it.
         denominator: must be QUESTION_CONDITIONED.
                      CLAIM_CONDITIONED raises NotImplementedError because
-                     M5 evidence is a merge of per-claim retrievals;
-                     computing claim-conditioned Recall@k requires a
-                     claim→gold supporting-facts mapping that is not yet
-                     available (see GAP-7 in evaluation/E_CONTRACT_PROPOSAL.md).
+                     a claim→gold mapping is not yet available (GAP-7).
 
     Returns:
         {"mean_recall": float, "n": int, "n_ok": int, "n_error": int,
@@ -136,23 +136,54 @@ def mean_recall_at_k(
             "See GAP-7 in evaluation/E_CONTRACT_PROPOSAL.md."
         )
 
-    subset = [r for r in records if r.get("method_id") == method_id]
+    if method_id == "M5":
+        raise NotImplementedError(
+            "QUESTION_CONDITIONED Recall@k is not defined for M5. "
+            "M5 evidence is per-claim (dict keyed by claim_id); merging "
+            "per-claim retrievals and comparing against question-level gold "
+            "is not semantically valid. Use per-claim Recall@k (GAP-7) instead."
+        )
+
+    def _f(rec, key, default=None):
+        return rec.get(key, default) if isinstance(rec, dict) else getattr(rec, key, default)
+
+    # Dedup: keep highest attempt per (example_id, method_id)
+    seen: dict = {}
+    for r in records:
+        r_mid = _f(r, "method_id", "")
+        if r_mid != method_id:
+            continue
+        r_eid = _f(r, "example_id", "")
+        r_attempt = _f(r, "attempt", 1) or 1
+        key = (r_eid, r_mid)
+        existing = seen.get(key)
+        if existing is None or r_attempt > (_f(existing, "attempt", 1) or 1):
+            seen[key] = r
+
+    subset = list(seen.values())
     total = len(subset)
     n_ok = 0
     n_error = 0
     recall_sum = 0.0
 
     for rec in subset:
-        eid = rec["example_id"]
-        if rec.get("status") != "ok":
+        eid = _f(rec, "example_id", "")
+        if _f(rec, "status", "error") != "ok":
             n_error += 1
             continue
 
         n_ok += 1
         gold_entry = gold_lookup.get(eid)
         gold = _gold_get(gold_entry, "gold_supporting_facts", []) if gold_entry is not None else []
-        evidence = rec.get("evidence", [])
-        recall_sum += recall_at_k(evidence, gold, k, denominator)
+
+        # Extract evidence list: new dict format {key: [list]} or old list format
+        raw_ev = _f(rec, "evidence", [])
+        if isinstance(raw_ev, dict):
+            ev_list = [e for evlist in raw_ev.values() for e in evlist]
+        else:
+            ev_list = raw_ev or []
+
+        recall_sum += recall_at_k(ev_list, gold, k, denominator)
 
     return {
         "mean_recall": recall_sum / total if total > 0 else 0.0,

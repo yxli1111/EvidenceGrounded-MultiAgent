@@ -289,3 +289,28 @@ No such mapping exists in the current data format.
 
 E will report question-conditioned Recall@k for the slides prototype and
 note this limitation explicitly.
+
+---
+
+## GAP-8: drain_usage() is an E extension, not in contracts/interfaces.py (C)
+
+**Status:** E's extension; C to confirm or provide alternative.
+
+`contracts/interfaces.py` defines `LLMClient.generate() -> LLMResponse` only. No
+`drain_usage()` method is in the contract. E's runner relies on `drain_usage()` for
+usage collection after each method run.
+
+**E's handling:** `ExperimentRunner.run()` always wraps the injected `llm` with
+`UsageWrapper`. `UsageWrapper` intercepts each `generate()` call, records usage from
+`LLMResponse.usage`, and exposes `drain_usage()` for the runner to consume. If the
+inner client already has `drain_usage`, `UsageWrapper` delegates to it.
+
+Additionally, `UsageWrapper` writes each call to `raw_calls.jsonl` alongside the run
+output, providing a complete audit log with `example_id`, `method_id`, `stage`,
+`messages`, and `response_text`.
+
+**C's options:**
+1. Do nothing — E's auto-wrap handles it transparently.
+2. Add `drain_usage()` to C's client explicitly — UsageWrapper will delegate to it.
+
+**No blocking change required from C.**

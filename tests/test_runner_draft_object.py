@@ -152,7 +152,7 @@ class TestDraftCacheReturnsObjects:
         )
         runner.run([make_synthetic_example("e1")], out)
         records_before = {r.method_id: r for r in load_records(out)}
-        original_draft_id = records_before["M1"].draft_id
+        original_draft_id = (records_before["M1"].draft or {}).get("draft_id")
 
         # Delete M3 to force resume
         with open(out, "w", encoding="utf-8") as f:
@@ -177,7 +177,7 @@ class TestDraftCacheReturnsObjects:
             f"M3 failed on resume: {all_records['M3'].error}"
         )
         # draft_id must match original (same cached draft)
-        assert all_records["M3"].draft_id == original_draft_id
+        assert (all_records["M3"].draft or {}).get("draft_id") == original_draft_id
 
 
 # ---------------------------------------------------------------------------

@@ -151,7 +151,8 @@ class TestDraftCacheResume:
         jsonl = self._setup_partial(tmp_path, eid="e_shared")
         _make_runner().run([make_synthetic_example("e_shared")], jsonl)
         records = load_records(jsonl)
-        draft_ids = {r.draft_id for r in records}
+        # Phase 2: draft_id is nested in rec.draft dict
+        draft_ids = {(r.draft or {}).get("draft_id") for r in records}
         assert len(draft_ids) == 1, (
             f"Multiple draft_ids after resume: {draft_ids}"
         )

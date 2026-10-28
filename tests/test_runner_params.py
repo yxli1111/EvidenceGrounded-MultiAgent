@@ -219,7 +219,7 @@ class TestM5EvidenceBudget:
         )
 
     def test_evidence_by_claim_preserved_under_budget(self, tmp_path):
-        """evidence_by_claim must contain every claim_id even with tight budget."""
+        """evidence (keyed by claim_id) must contain every claim_id even with tight budget."""
         runner, out = _make_runner(
             tmp_path,
             m5_total_evidence_budget=1,  # very tight: only 1 slot total
@@ -228,8 +228,10 @@ class TestM5EvidenceBudget:
         records = {r.method_id: r for r in load_records(out)}
         m5 = records["M5"]
         claim_ids = {c["claim_id"] for c in m5.claims}
-        assert set(m5.evidence_by_claim.keys()) == claim_ids, (
-            "evidence_by_claim must contain all claim_ids even with tight budget"
+        # M5 evidence is now a dict keyed by claim_id (no separate evidence_by_claim)
+        assert isinstance(m5.evidence, dict), f"M5 evidence must be a dict, got {type(m5.evidence)}"
+        assert set(m5.evidence.keys()) == claim_ids, (
+            "evidence must contain all claim_ids even with tight budget"
         )
 
 
@@ -239,7 +241,7 @@ class TestM5EvidenceBudget:
 
 class TestModelSettingsRetrieval:
     def test_retrieval_params_written_to_model_settings(self, tmp_path):
-        """Retrieval params must appear in every record's model_settings."""
+        """Retrieval params must appear in every record's model_config."""
         runner, out = _make_runner(
             tmp_path,
             top_k=3,
@@ -255,10 +257,10 @@ class TestModelSettingsRetrieval:
         )
         records = load_records(out)
         for rec in records:
-            ms = rec.model_settings
+            ms = rec.model_config
             assert ms is not None
             ret = ms.get("_retrieval")
-            assert ret is not None, f"model_settings missing '_retrieval' key for {rec.method_id}"
+            assert ret is not None, f"model_config missing '_retrieval' key for {rec.method_id}"
             assert ret["m4_top_k"] == 5
             assert ret["m5_top_k_per_claim"] == 2
             assert ret["m5_total_evidence_budget"] == 4
@@ -274,8 +276,8 @@ class TestModelSettingsRetrieval:
         )
         records = load_records(out)
         for rec in records:
-            assert rec.model_settings["model"] == "my-model"
-            assert "_retrieval" in rec.model_settings
+            assert rec.model_config["model"] == "my-model"
+            assert "_retrieval" in rec.model_config
 
 
 # ---------------------------------------------------------------------------

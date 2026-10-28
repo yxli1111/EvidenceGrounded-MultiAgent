@@ -82,7 +82,8 @@ class TestExportCsvWithObjects:
 
         records = [_make_record("e1", "M1", final_answer="Paris")]
         lookup  = {"e1": _DuckQAGold("Paris", [])}
-        path    = export_per_example_csv(records, lookup, str(tmp_path / "out.csv"))
+        path    = export_per_example_csv(records, lookup, str(tmp_path / "out.csv"),
+                                          preliminary=False)
         import csv
         with open(path) as f:
             rows = list(csv.DictReader(f))
@@ -94,7 +95,8 @@ class TestExportCsvWithObjects:
 
         records = [_make_record("e1", "M1", final_answer="Berlin")]
         lookup  = {"e1": _DuckQAGold("Paris", [])}
-        path    = export_per_example_csv(records, lookup, str(tmp_path / "out.csv"))
+        path    = export_per_example_csv(records, lookup, str(tmp_path / "out.csv"),
+                                          preliminary=False)
         import csv
         with open(path) as f:
             rows = list(csv.DictReader(f))

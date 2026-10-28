@@ -276,7 +276,8 @@ class TestExportPerExampleCsv:
         out = str(tmp_path / "cols.csv")
         records = [self._make_record("e1", "M1", "ok", "Paris", "Paris")]
         gold = {"e1": {"gold_answer": "Paris"}}
-        export_per_example_csv(records, gold, output_path=out)
+        # Use preliminary=False to get a clean CSV without comment header
+        export_per_example_csv(records, gold, output_path=out, preliminary=False)
         with open(out, newline="", encoding="utf-8") as f:
             header = next(csv.reader(f))
         assert header == ["example_id", "method_id", "status", "em", "f1",
@@ -288,7 +289,7 @@ class TestExportPerExampleCsv:
         out = str(tmp_path / "vals.csv")
         records = [self._make_record("e1", "M1", "ok", "Paris", "London")]
         gold = {"e1": {"gold_answer": "Paris"}}
-        export_per_example_csv(records, gold, output_path=out)
+        export_per_example_csv(records, gold, output_path=out, preliminary=False)
         with open(out, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
         assert len(rows) == 1
@@ -301,7 +302,7 @@ class TestExportPerExampleCsv:
         out = str(tmp_path / "err.csv")
         records = [self._make_record("e1", "M1", "error", None, None)]
         gold = {"e1": {"gold_answer": "Paris"}}
-        export_per_example_csv(records, gold, output_path=out)
+        export_per_example_csv(records, gold, output_path=out, preliminary=False)
         with open(out, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
         assert float(rows[0]["em"]) == pytest.approx(0.0)
@@ -313,7 +314,7 @@ class TestExportPerExampleCsv:
         out = str(tmp_path / "qt.csv")
         records = [self._make_record("e1", "M1", "ok", "yes", "yes", "yesno")]
         gold = {"e1": {"gold_answer": "yes"}}
-        export_per_example_csv(records, gold, output_path=out)
+        export_per_example_csv(records, gold, output_path=out, preliminary=False)
         with open(out, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
         assert rows[0]["question_type"] == "yesno"
@@ -324,3 +325,100 @@ class TestExportPerExampleCsv:
         export_per_example_csv([], {}, output_path=out)
         import os
         assert os.path.exists(out)
+
+
+# ---------------------------------------------------------------------------
+# export_per_example_csv — new behaviour (Items 2a-2c)
+# ---------------------------------------------------------------------------
+
+class TestExportPerExampleCsvNewFormat:
+    def _rec(self, eid, mid, pred, short, status="ok", attempt=1, qt=None):
+        return {
+            "example_id": eid,
+            "method_id": mid,
+            "status": status,
+            "final_answer": pred,
+            "short_answer": short,
+            "attempt": attempt,
+            "question_type": qt,
+        }
+
+    def test_no_comment_line_in_csv(self, tmp_path):
+        """CSV must not start with '#'; pandas.read_csv must read it directly."""
+        from src.evaluation.answer_metrics import export_per_example_csv
+        out = str(tmp_path / "out.csv")
+        records = [self._rec("e1", "M1", "Paris", "Paris")]
+        gold = {"e1": {"gold_answer": "Paris"}}
+        export_per_example_csv(records, gold, output_path=out, preliminary=True)
+        with open(out, encoding="utf-8") as f:
+            first = f.readline().strip()
+        assert not first.startswith("#"), "CSV must not start with a comment line"
+        assert "example_id" in first
+
+    def test_metadata_json_written_alongside_csv(self, tmp_path):
+        """metadata.json is created in the same directory as the CSV."""
+        import json
+        from src.evaluation.answer_metrics import export_per_example_csv
+        out = str(tmp_path / "out.csv")
+        records = [self._rec("e1", "M1", "Paris", "Paris")]
+        gold = {"e1": {"gold_answer": "Paris"}}
+        export_per_example_csv(records, gold, output_path=out, preliminary=True)
+        meta = tmp_path / "metadata.json"
+        assert meta.exists(), "metadata.json must be created alongside CSV"
+        data = json.loads(meta.read_text())
+        assert data["preliminary"] is True
+        assert "n" in data
+
+    def test_metadata_json_n_reflects_deduped_count(self, tmp_path):
+        """metadata.json n equals the number of deduped rows written."""
+        import json
+        from src.evaluation.answer_metrics import export_per_example_csv
+        out = str(tmp_path / "out.csv")
+        records = [
+            self._rec("e1", "M1", "Wrong", "Wrong", attempt=1),
+            self._rec("e1", "M1", "Paris", "Paris", attempt=2),  # duplicate
+        ]
+        gold = {"e1": {"gold_answer": "Paris"}}
+        export_per_example_csv(records, gold, output_path=out)
+        meta = json.loads((tmp_path / "metadata.json").read_text())
+        assert meta["n"] == 1  # deduped
+
+    def test_dedup_keeps_highest_attempt_in_csv(self, tmp_path):
+        """Two attempts for same (eid, mid); only highest attempt row in CSV."""
+        import csv
+        from src.evaluation.answer_metrics import export_per_example_csv
+        out = str(tmp_path / "out.csv")
+        records = [
+            self._rec("e1", "M1", "Wrong", "Wrong", attempt=1),
+            self._rec("e1", "M1", "Paris", "Paris", attempt=2),
+        ]
+        gold = {"e1": {"gold_answer": "Paris"}}
+        export_per_example_csv(records, gold, output_path=out, preliminary=False)
+        with open(out, newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+        assert len(rows) == 1, "deduped: only one row"
+        assert float(rows[0]["em"]) == pytest.approx(1.0), "highest attempt (Paris)"
+
+    def test_pandas_reads_csv_without_skiprows(self, tmp_path):
+        """pandas.read_csv must work without comment= or skiprows= argument."""
+        from src.evaluation.answer_metrics import export_per_example_csv
+        out = str(tmp_path / "out.csv")
+        records = [self._rec("e1", "M1", "Paris", "Paris")]
+        gold = {"e1": {"gold_answer": "Paris"}}
+        export_per_example_csv(records, gold, output_path=out, preliminary=True)
+        try:
+            import pandas as pd
+            df = pd.read_csv(out)
+            assert "example_id" in df.columns
+        except ImportError:
+            pytest.skip("pandas not installed")
+
+    def test_metadata_omitted_metrics_field(self, tmp_path):
+        """omitted_metrics list is written to metadata.json when provided."""
+        import json
+        from src.evaluation.answer_metrics import export_per_example_csv
+        out = str(tmp_path / "out.csv")
+        export_per_example_csv([], {}, output_path=out,
+                                omitted_metrics=["retrieval", "cost"])
+        meta = json.loads((tmp_path / "metadata.json").read_text())
+        assert meta.get("omitted_metrics") == ["retrieval", "cost"]

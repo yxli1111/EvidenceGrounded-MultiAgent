@@ -126,7 +126,25 @@ def compare_methods(
         if not gold_entry:
             return 0.0
         gold = _gold_get(gold_entry, "gold_answer", "")
-        pred = _get(rec, "final_answer") or ""
+        # Handle nested field structure (Phase 2): final/draft dicts
+        if isinstance(rec, dict):
+            final = rec.get("final") or {}
+            draft = rec.get("draft") or {}
+            if isinstance(final, dict) and final.get("final_answer"):
+                pred = final["final_answer"]
+            elif isinstance(draft, dict) and draft.get("short_answer"):
+                pred = draft["short_answer"]
+            else:
+                pred = rec.get("final_answer") or ""
+        else:
+            final = getattr(rec, "final", None) or {}
+            draft = getattr(rec, "draft", None) or {}
+            if isinstance(final, dict) and final.get("final_answer"):
+                pred = final["final_answer"]
+            elif isinstance(draft, dict) and draft.get("short_answer"):
+                pred = draft["short_answer"]
+            else:
+                pred = getattr(rec, "final_answer", None) or ""
         if metric == "f1":
             return token_f1(pred, gold)
         return exact_match(pred, gold)

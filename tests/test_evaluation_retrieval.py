@@ -173,15 +173,16 @@ class TestMeanRecallAtK:
 
     def test_filters_by_method_id(self):
         evidence = make_evidence([("France", 0)])
+        no_ev = make_evidence([])
         records = self._records([
             {"eid": "e1", "mid": "M4", "evidence": evidence},
-            {"eid": "e1", "mid": "M5", "evidence": []},
+            {"eid": "e1", "mid": "M3", "evidence": no_ev},
         ])
         gold = self._gold({"e1": [("France", 0)]})
         r_m4 = mean_recall_at_k(records, gold, k=5, method_id="M4")
-        r_m5 = mean_recall_at_k(records, gold, k=5, method_id="M5")
+        r_m3 = mean_recall_at_k(records, gold, k=5, method_id="M3")
         assert r_m4["mean_recall"] == pytest.approx(1.0)
-        assert r_m5["mean_recall"] == pytest.approx(0.0)
+        assert r_m3["mean_recall"] == pytest.approx(0.0)
 
     def test_denominator_label_preserved(self):
         records = self._records([{"eid": "e1", "mid": "M4", "evidence": []}])
@@ -213,6 +214,77 @@ class TestClaimConditionedNotImplemented:
                 records, gold, k=5, method_id="M4",
                 denominator=RecallDenominator.CLAIM_CONDITIONED
             )
+
+
+# ---------------------------------------------------------------------------
+# New format: evidence as dict, M5 raises, internal dedup (Items 1a-1c)
+# ---------------------------------------------------------------------------
+
+class TestMeanRecallNewFormat:
+    def test_m4_dict_evidence_extracted(self):
+        """M4 evidence is now a dict {draft_id: [list]}; function must extract the list."""
+        evidence = make_evidence([("France", 0)])
+        records = [
+            {
+                "example_id": "e1",
+                "method_id": "M4",
+                "status": "ok",
+                "evidence": {"draft-abc": evidence},  # new dict format
+                "attempt": 1,
+            }
+        ]
+        gold = {"e1": {"gold_supporting_facts": make_gold([("France", 0)])}}
+        result = mean_recall_at_k(records, gold, k=5, method_id="M4")
+        assert result["mean_recall"] == pytest.approx(1.0)
+
+    def test_m5_raises_not_implemented_error(self):
+        """M5 evidence is per-claim; question-conditioned Recall@k is not defined for it."""
+        records = [
+            {"example_id": "e1", "method_id": "M5", "status": "ok",
+             "evidence": {"c1": []}, "attempt": 1}
+        ]
+        gold = {"e1": {"gold_supporting_facts": []}}
+        with pytest.raises(NotImplementedError):
+            mean_recall_at_k(records, gold, k=5, method_id="M5")
+
+    def test_m5_raises_even_when_question_conditioned(self):
+        """M5 raises NotImplementedError regardless of denominator."""
+        records = [
+            {"example_id": "e1", "method_id": "M5", "status": "ok",
+             "evidence": {}, "attempt": 1}
+        ]
+        gold = {"e1": {"gold_supporting_facts": []}}
+        with pytest.raises(NotImplementedError):
+            mean_recall_at_k(
+                records, gold, k=5, method_id="M5",
+                denominator=RecallDenominator.QUESTION_CONDITIONED,
+            )
+
+    def test_dedup_keeps_highest_attempt(self):
+        """Two attempts for same (example_id, method_id); only highest is counted."""
+        bad_ev = make_evidence([])          # recall = 0.0
+        good_ev = make_evidence([("France", 0)])  # recall = 1.0
+        records = [
+            {"example_id": "e1", "method_id": "M4", "status": "ok",
+             "evidence": {"d1": bad_ev}, "attempt": 1},
+            {"example_id": "e1", "method_id": "M4", "status": "ok",
+             "evidence": {"d1": good_ev}, "attempt": 2},
+        ]
+        gold = {"e1": {"gold_supporting_facts": make_gold([("France", 0)])}}
+        result = mean_recall_at_k(records, gold, k=5, method_id="M4")
+        assert result["n"] == 1           # one unique (eid, mid) pair
+        assert result["mean_recall"] == pytest.approx(1.0)  # highest attempt
+
+    def test_backward_compat_list_evidence(self):
+        """Old list format still works (backward compatibility)."""
+        evidence = make_evidence([("France", 0)])
+        records = [
+            {"example_id": "e1", "method_id": "M4", "status": "ok",
+             "evidence": evidence, "attempt": 1},  # old list format
+        ]
+        gold = {"e1": {"gold_supporting_facts": make_gold([("France", 0)])}}
+        result = mean_recall_at_k(records, gold, k=5, method_id="M4")
+        assert result["mean_recall"] == pytest.approx(1.0)
 
 
 # ---------------------------------------------------------------------------

@@ -12,6 +12,8 @@ Responsibilities
 * Collect LLM usage from each method run via llm.drain_usage() if available.
   draft_usage (generate_draft) is kept separate to avoid 5× double-counting in
   cost analysis; P3 decides how to allocate shared draft cost.
+* Always wraps the injected llm with UsageWrapper for raw_calls.jsonl logging.
+  If the inner client already has drain_usage, UsageWrapper delegates to it.
 
 Integration notes
 -----------------
@@ -20,14 +22,15 @@ Integration notes
   When real implementations arrive, replace the ports; the runner is unchanged.
 * D's configure() must be called by the experiment script BEFORE creating the
   runner, not inside the runner (see evaluation/E_CONTRACT_PROPOSAL.md GAP-6).
-* M4 query = draft.explanation (or question + "\n" + explanation when
+* M4 query = draft.explanation (or question + "\\n" + explanation when
   query_include_question=True).  M5 query = claim.claim_text (or question +
-  "\n" + claim_text).  Template is identical for both methods; controlled by
+  "\\n" + claim_text).  Template is identical for both methods; controlled by
   the query_include_question constructor flag.
 """
 
 from __future__ import annotations
 
+import pathlib
 from datetime import datetime, timezone
 from typing import Any
 
@@ -41,6 +44,14 @@ from .records import (
     make_error_record,
     save_draft,
 )
+from .serialization import (
+    ser_claims,
+    ser_draft,
+    ser_evidence_list,
+    ser_feedback,
+    ser_revision,
+)
+from .usage_wrapper import UsageWrapper
 
 _METHOD_IDS = ["M1", "M2", "M3", "M4", "M5"]
 
@@ -78,82 +89,6 @@ def _collect_prompt_versions(ports: list[tuple[str, Any]]) -> dict:
             val = getattr(port, "prompt_version", None)
             if val is not None:
                 result[port_name] = val
-    return result
-
-
-# ---------------------------------------------------------------------------
-# Evidence / feedback serialisers (work with both dicts and mock/real objects)
-# ---------------------------------------------------------------------------
-
-def _ser_draft(d: Any) -> dict:
-    if isinstance(d, dict):
-        return d
-    return {
-        "draft_id": d.draft_id,
-        "short_answer": d.short_answer,
-        "explanation": d.explanation,
-    }
-
-
-def _ser_revision(r: Any) -> dict:
-    if isinstance(r, dict):
-        return r
-    return {
-        "draft_id": r.draft_id,
-        "feedback_id": r.feedback_id,
-        "final_answer": r.final_answer,
-        "final_explanation": r.final_explanation,
-    }
-
-
-def _ser_feedback(fb: Any) -> dict:
-    if isinstance(fb, dict):
-        return fb
-    items = []
-    for item in fb.items:
-        items.append({
-            "scope": item.scope,
-            "target_id": item.target_id,
-            "rationale": item.rationale,
-            "label": item.label,
-            "evidence_ids": list(item.evidence_ids),
-            "suggested_correction": getattr(item, "suggested_correction", None),
-        })
-    return {
-        "feedback_id": fb.feedback_id,
-        "items": items,
-        "overall_comment": fb.overall_comment,
-    }
-
-
-def _ser_evidence_list(evs: list) -> list[dict]:
-    result = []
-    for ev in evs:
-        if isinstance(ev, dict):
-            result.append(ev)
-        else:
-            result.append({
-                "doc_title": ev.doc_title,
-                "sentence_id": ev.sentence_id,
-                "text": ev.text,
-                "score": float(ev.score),
-                "retrieval_query": ev.retrieval_query,
-                "rank": ev.rank,
-            })
-    return result
-
-
-def _ser_claims(claims: list) -> list[dict]:
-    result = []
-    for c in claims:
-        if isinstance(c, dict):
-            result.append(c)
-        else:
-            result.append({
-                "claim_id": c.claim_id,
-                "claim_text": c.claim_text,
-                "source_span": list(c.source_span) if getattr(c, "source_span", None) else None,
-            })
     return result
 
 
@@ -275,6 +210,14 @@ class ExperimentRunner:
                     f"Overlapping IDs: {sorted(overlap)}"
                 )
 
+        # QAGold isolation: examples must never carry gold labels
+        for ex in examples:
+            if hasattr(ex, "gold_answer") or (isinstance(ex, dict) and "gold_answer" in ex):
+                raise ValueError(
+                    "QAGold must not be passed to ExperimentRunner.run(). "
+                    "Pass QAInput objects only; keep gold lookup separate."
+                )
+
         # Merge retrieval params into a copy of model_settings for full traceability.
         effective_ms: dict = dict(model_settings) if model_settings else {}
         effective_ms["_retrieval"] = {
@@ -284,6 +227,18 @@ class ExperimentRunner:
             "query_include_question": self.query_include_question,
             "query_template": "question+nl+text" if self.query_include_question else "text_only",
         }
+
+        # Compute raw_calls_path alongside the output file
+        raw_calls_path = str(pathlib.Path(output_path).parent / "raw_calls.jsonl")
+
+        # Always wrap llm with UsageWrapper for raw_calls.jsonl logging.
+        # If inner already has drain_usage, UsageWrapper delegates to it.
+        # This ensures raw_calls.jsonl is always written regardless of the inner client.
+        if isinstance(self.llm, UsageWrapper):
+            effective_llm = self.llm
+            effective_llm.raw_calls_path = raw_calls_path
+        else:
+            effective_llm = UsageWrapper(self.llm, raw_calls_path=raw_calls_path)
 
         completed = load_completed(output_path, retry_errors=retry_errors)
         dpath = drafts_path(output_path)
@@ -313,6 +268,10 @@ class ExperimentRunner:
             if all((eid, mid) in completed for mid in _METHOD_IDS):
                 continue
 
+            # Set context for raw call logging
+            if hasattr(effective_llm, "set_context"):
+                effective_llm.set_context(eid, "draft")
+
             # Get draft from cache or generate a new one.
             if eid in draft_cache:
                 cached = draft_cache[eid]
@@ -320,10 +279,10 @@ class ExperimentRunner:
                 draft_usage: list[dict] = cached["draft_usage"]
             else:
                 try:
-                    draft = self.draft_port.generate_draft(example, self.llm)
-                    draft_usage = self._drain_usage()
+                    draft = self.draft_port.generate_draft(example, effective_llm)
+                    draft_usage = self._drain_usage(effective_llm)
                 except Exception as exc:
-                    draft_usage = self._drain_usage()
+                    draft_usage = self._drain_usage(effective_llm)
                     is_fatal = type(exc).__name__ in _FATAL_ERROR_TYPES
                     for mid in _METHOD_IDS:
                         if (eid, mid) in completed:
@@ -334,13 +293,14 @@ class ExperimentRunner:
                         rec.prompt_versions = prompt_versions
                         rec.question_type = question_type
                         rec.raw_outputs = list(getattr(exc, "raw_outputs", None) or []) or None
+                        rec.raw_calls_path = raw_calls_path
                         append_record(output_path, rec)
                         new_records.append(rec)
                     if is_fatal:
                         raise
                     continue
 
-                dd = _ser_draft(draft)
+                dd = ser_draft(draft)
                 save_draft(dpath, eid, dd, draft_usage)
                 draft_cache[eid] = {
                     "example_id": eid,
@@ -352,12 +312,17 @@ class ExperimentRunner:
                 if (eid, mid) in completed:
                     continue
                 attempt = attempt_map.get((eid, mid), 0) + 1
+
+                # Set context for raw call logging
+                if hasattr(effective_llm, "set_context"):
+                    effective_llm.set_context(eid, mid)
+
                 try:
                     method_fn = getattr(self, f"_run_{mid.lower()}")
-                    rec = method_fn(example, draft, effective_ms)
+                    rec = method_fn(example, draft, effective_ms, effective_llm)
                     rec.attempt = attempt
                 except Exception as exc:
-                    partial_usage = self._drain_usage()
+                    partial_usage = self._drain_usage(effective_llm)
                     rec = make_error_record(eid, mid, str(exc), question, effective_ms)
                     rec.attempt = attempt
                     rec.usage = partial_usage
@@ -365,6 +330,7 @@ class ExperimentRunner:
                     rec.draft_usage = list(draft_usage)
                     rec.prompt_versions = prompt_versions
                     rec.question_type = question_type
+                    rec.raw_calls_path = raw_calls_path
                     append_record(output_path, rec)
                     new_records.append(rec)
                     if type(exc).__name__ in _FATAL_ERROR_TYPES:
@@ -374,6 +340,7 @@ class ExperimentRunner:
                 rec.draft_usage = list(draft_usage)
                 rec.prompt_versions = prompt_versions
                 rec.question_type = question_type
+                rec.raw_calls_path = raw_calls_path
                 append_record(output_path, rec)
                 new_records.append(rec)
 
@@ -384,98 +351,90 @@ class ExperimentRunner:
     # ------------------------------------------------------------------
 
     def _run_m1(
-        self, example: Any, draft: Any, model_settings: dict | None
+        self, example: Any, draft: Any, model_config: dict | None, effective_llm: Any
     ) -> ExperimentRecord:
-        dd = _ser_draft(draft)
-        usage = self._drain_usage()
+        dd = ser_draft(draft)
+        usage = self._drain_usage(effective_llm)
         return ExperimentRecord(
             example_id=_attr(example, "example_id"),
             method_id="M1",
             status="ok",
             timestamp=_now(),
             question=_attr(example, "question", ""),
-            draft_id=dd["draft_id"],
-            short_answer=dd["short_answer"],
-            explanation=dd["explanation"],
-            final_answer=dd["short_answer"],        # M1: draft is final
-            final_explanation=dd["explanation"],
+            draft=dd,
+            final=None,    # M1: no RevisionResult — critical per contract §2, §4
+            evidence={},   # M1: no retrieval
             usage=usage,
-            model_settings=model_settings,
+            model_config=model_config,
         )
 
     def _run_m2(
-        self, example: Any, draft: Any, model_settings: dict | None
+        self, example: Any, draft: Any, model_config: dict | None, effective_llm: Any
     ) -> ExperimentRecord:
         run_m2_fn = getattr(self.draft_port, "run_m2", None)
         if callable(run_m2_fn):
-            output = run_m2_fn(example, draft, self.llm)
-            usage = self._drain_usage()
+            output = run_m2_fn(example, draft, effective_llm)
+            usage = self._drain_usage(effective_llm)
             # BaselineOutput has .final (RevisionResult | None) and .feedback
             final_obj = getattr(output, "final", None)
             fb_obj = getattr(output, "feedback", None)
             revision = final_obj if final_obj is not None else output
             if fb_obj is not None:
-                feedback_dict = _ser_feedback(fb_obj)
+                feedback_dict = ser_feedback(fb_obj)
             else:
-                rd_tmp = _ser_revision(revision)
+                rd_tmp = ser_revision(revision)
                 feedback_dict = {
                     "feedback_id": rd_tmp.get("feedback_id", ""),
                     "items": [],
                     "overall_comment": "M2 self-reflection",
                 }
         else:
-            revision = self.draft_port.self_reflect(example, draft, self.llm)
-            usage = self._drain_usage()
-            rd_tmp = _ser_revision(revision)
+            revision = self.draft_port.self_reflect(example, draft, effective_llm)
+            usage = self._drain_usage(effective_llm)
+            rd_tmp = ser_revision(revision)
             feedback_dict = {
                 "feedback_id": rd_tmp.get("feedback_id", ""),
                 "items": [],
                 "overall_comment": "M2 self-reflection",
             }
-        dd = _ser_draft(draft)
-        rd = _ser_revision(revision)
+        dd = ser_draft(draft)
+        rd = ser_revision(revision)
         return ExperimentRecord(
             example_id=_attr(example, "example_id"),
             method_id="M2",
             status="ok",
             timestamp=_now(),
             question=_attr(example, "question", ""),
-            draft_id=dd["draft_id"],
-            short_answer=dd["short_answer"],
-            explanation=dd["explanation"],
-            final_answer=rd["final_answer"],
-            final_explanation=rd["final_explanation"],
+            draft=dd,
+            final=rd,
             feedback=feedback_dict,
             usage=usage,
-            model_settings=model_settings,
+            model_config=model_config,
         )
 
     def _run_m3(
-        self, example: Any, draft: Any, model_settings: dict | None
+        self, example: Any, draft: Any, model_config: dict | None, effective_llm: Any
     ) -> ExperimentRecord:
-        feedback = self.draft_port.independent_critique(example, draft, self.llm)
-        revision = self.verification_port.revise_answer(example, draft, feedback, self.llm)
-        usage = self._drain_usage()
-        dd = _ser_draft(draft)
-        rd = _ser_revision(revision)
+        feedback = self.draft_port.independent_critique(example, draft, effective_llm)
+        revision = self.verification_port.revise_answer(example, draft, feedback, effective_llm)
+        usage = self._drain_usage(effective_llm)
+        dd = ser_draft(draft)
+        rd = ser_revision(revision)
         return ExperimentRecord(
             example_id=_attr(example, "example_id"),
             method_id="M3",
             status="ok",
             timestamp=_now(),
             question=_attr(example, "question", ""),
-            draft_id=dd["draft_id"],
-            short_answer=dd["short_answer"],
-            explanation=dd["explanation"],
-            final_answer=rd["final_answer"],
-            final_explanation=rd["final_explanation"],
-            feedback=_ser_feedback(feedback),
+            draft=dd,
+            final=rd,
+            feedback=ser_feedback(feedback),
             usage=usage,
-            model_settings=model_settings,
+            model_config=model_config,
         )
 
     def _run_m4(
-        self, example: Any, draft: Any, model_settings: dict | None
+        self, example: Any, draft: Any, model_config: dict | None, effective_llm: Any
     ) -> ExperimentRecord:
         effective_k = self.m4_top_k if self.m4_top_k is not None else self.top_k
         question = _attr(example, "question", "")
@@ -485,42 +444,38 @@ class ExperimentRunner:
         query = (question + "\n" + explanation) if self.query_include_question and question else explanation
         context = _attr(example, "context")
         evidence = self.retrieve_port.retrieve(query, context, effective_k)
-        feedback = self.verification_port.verify_draft(example, draft, evidence, self.llm)
-        revision = self.verification_port.revise_answer(example, draft, feedback, self.llm)
-        usage = self._drain_usage()
-        dd = _ser_draft(draft)
-        rd = _ser_revision(revision)
+        feedback = self.verification_port.verify_draft(example, draft, evidence, effective_llm)
+        revision = self.verification_port.revise_answer(example, draft, feedback, effective_llm)
+        usage = self._drain_usage(effective_llm)
+        dd = ser_draft(draft)
+        rd = ser_revision(revision)
         return ExperimentRecord(
             example_id=_attr(example, "example_id"),
             method_id="M4",
             status="ok",
             timestamp=_now(),
             question=_attr(example, "question", ""),
-            draft_id=dd["draft_id"],
-            short_answer=dd["short_answer"],
-            explanation=dd["explanation"],
-            final_answer=rd["final_answer"],
-            final_explanation=rd["final_explanation"],
-            evidence=_ser_evidence_list(evidence),
-            feedback=_ser_feedback(feedback),
+            draft=dd,
+            final=rd,
+            # evidence keyed by draft_id (M4 convention)
+            evidence={dd["draft_id"]: ser_evidence_list(evidence)},
+            feedback=ser_feedback(feedback),
             usage=usage,
-            model_settings=model_settings,
+            model_config=model_config,
         )
 
     def _run_m5(
-        self, example: Any, draft: Any, model_settings: dict | None
+        self, example: Any, draft: Any, model_config: dict | None, effective_llm: Any
     ) -> ExperimentRecord:
         context = _attr(example, "context")
         question = _attr(example, "question", "")
-        claims = self.claims_port.extract_claims(draft, self.llm)
+        claims = self.claims_port.extract_claims(draft, effective_llm)
 
         top_k_per_claim = self.m5_top_k_per_claim if self.m5_top_k_per_claim is not None else self.top_k
         allocations = _m5_allocations(len(claims), top_k_per_claim, self.m5_total_evidence_budget)
 
         evidence_by_claim: dict[str, list] = {}
         evidence_by_claim_dicts: dict[str, list[dict]] = {}
-        all_ev_dicts: list[dict] = []
-        seen: set[tuple] = set()
 
         for i, claim in enumerate(claims):
             cid = _attr(claim, "claim_id")
@@ -532,46 +487,41 @@ class ExperimentRunner:
             else:
                 evs = []
             evidence_by_claim[cid] = evs
-            ev_dicts = _ser_evidence_list(evs)
+            ev_dicts = ser_evidence_list(evs)
             evidence_by_claim_dicts[cid] = ev_dicts
-            for ev in ev_dicts:
-                key = (ev["doc_title"], ev["sentence_id"])
-                if key not in seen:
-                    seen.add(key)
-                    all_ev_dicts.append(ev)
 
+        # §9.3: empty claims is a valid result (no factual content). verify_claims still runs.
+        # Only exceptions from extract_claims propagate as status="error".
         feedback = self.verification_port.verify_claims(
-            example, draft, claims, evidence_by_claim, self.llm
+            example, draft, claims, evidence_by_claim, effective_llm
         )
-        revision = self.verification_port.revise_answer(example, draft, feedback, self.llm)
-        usage = self._drain_usage()
-        dd = _ser_draft(draft)
-        rd = _ser_revision(revision)
+        revision = self.verification_port.revise_answer(example, draft, feedback, effective_llm)
+        usage = self._drain_usage(effective_llm)
+        dd = ser_draft(draft)
+        rd = ser_revision(revision)
+        # evidence keyed by claim_id (M5 convention)
+        evidence = {cid: ev_dicts for cid, ev_dicts in evidence_by_claim_dicts.items()}
         return ExperimentRecord(
             example_id=_attr(example, "example_id"),
             method_id="M5",
             status="ok",
             timestamp=_now(),
             question=_attr(example, "question", ""),
-            draft_id=dd["draft_id"],
-            short_answer=dd["short_answer"],
-            explanation=dd["explanation"],
-            final_answer=rd["final_answer"],
-            final_explanation=rd["final_explanation"],
-            claims=_ser_claims(claims),
-            evidence=all_ev_dicts,
-            evidence_by_claim=evidence_by_claim_dicts,
-            feedback=_ser_feedback(feedback),
+            draft=dd,
+            final=rd,
+            claims=ser_claims(claims),
+            evidence=evidence,
+            feedback=ser_feedback(feedback),
             usage=usage,
-            model_settings=model_settings,
+            model_config=model_config,
         )
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _drain_usage(self) -> list[dict]:
-        drain_fn = getattr(self.llm, "drain_usage", None)
+    def _drain_usage(self, effective_llm: Any) -> list[dict]:
+        drain_fn = getattr(effective_llm, "drain_usage", None)
         if callable(drain_fn):
             return drain_fn()
         return []

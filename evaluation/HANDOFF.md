@@ -80,8 +80,8 @@ assert_disjoint(dev_ids, eval_ids)       # raise if dev examples leak into eval 
 
 records = runner.run(
     eval_examples,     # list of objects with .example_id, .question, .context
-    "output.jsonl",    # checkpoint path — safe to resume if interrupted
-    model_settings={"model": "openai/gpt-4o", "temperature": 0.0},
+    "results/run.jsonl",    # checkpoint path — safe to resume if interrupted
+    model_settings={"model": "openai/gpt-4o-mini", "temperature": 0.0},
     exclude_ids=dev_ids,      # raises ValueError if any example_id is in dev_ids
     retry_errors=False,       # set True to retry (example_id, method_id) pairs
                               # whose latest attempt has status="error"
@@ -89,7 +89,7 @@ records = runner.run(
 
 # For accuracy metrics: only count the latest attempt per pair
 from src.runner.records import latest_records, load_records
-all_records = load_records("output.jsonl")
+all_records = load_records("results/run.jsonl")
 latest = latest_records(all_records)   # deduped by (example_id, method_id)
 
 # For cost metrics: use ALL records so retry waste is included
@@ -119,17 +119,41 @@ output file already exists, completed pairs are skipped (idempotent resume).
 Retry records are **appended** — old records are never modified or deleted.  Each record has an
 `attempt` field (int, starts at 1) that increments with each retry.
 
-## UsageWrapper limitations
+## UsageWrapper and C's TrackingLLMClient
 
-`src/runner/usage_wrapper.py` bridges C's `LLMClient` interface to E's cost
-metrics.  Key constraints:
+`ExperimentRunner` always wraps the caller-supplied LLM client with
+`UsageWrapper` before passing it to port calls.  If you are also using C's
+`TrackingLLMClient`, wrap in this order:
+
+```python
+from src.core.tracking_llm_client import TrackingLLMClient
+from src.runner.usage_wrapper import UsageWrapper
+
+# Correct nesting: UsageWrapper is the outermost layer.
+# E's runner calls generate() on the UsageWrapper, which delegates to
+# TrackingLLMClient, which delegates to the real client.
+tracker = TrackingLLMClient(real_client)
+runner = ExperimentRunner(..., llm=tracker)   # runner wraps it internally
+```
+
+`TrackingLLMClient` (C's) tracks aggregate totals (`generate_calls`,
+`completed_calls`, `observed_cost_usd`) but does **not** implement
+`drain_usage()`.  The runner's internal `UsageWrapper` detects the missing
+method and falls back to its own per-call log — per-call usage and
+`raw_calls.jsonl` work correctly regardless.
+
+**Model name:** use `"openai/gpt-4o-mini"` (not `"openai/gpt-4o"`) in
+`model_settings` when calling through OpenRouter.  The A-baselines branch
+confirms this is the model used for dev-set drafts.
+
+### UsageWrapper constraints
 
 | Behaviour | Detail |
 |-----------|--------|
-| `latency_seconds → latency_ms` | Only applies when `drain_usage` is **not** available on the inner client.  When the inner client has `drain_usage`, the wrapper delegates to it entirely and its own conversion is discarded. |
-| Inner `drain_usage` takes priority | The wrapper's own converted log is cleared and inner's records are returned.  If inner `drain_usage` returns entries with `latency_seconds`, `cost_metrics._accumulate()` will convert them via the `latency_seconds` fallback. |
-| Error entries | If `inner.generate()` raises, an error entry `{"stage", "model", "status": "error", "error_type"}` is appended to the wrapper log.  These entries contain no token or cost data. |
-| No retries | The wrapper re-raises all exceptions immediately; retry logic belongs in the caller. |
+| Stores `latency_seconds` | Wrapper stores `latency_seconds` (not `latency_ms`). `cost_metrics._accumulate` reads `latency_seconds` first, then falls back to `latency_ms`. |
+| `drain_usage` delegation | If the inner client has `drain_usage`, the wrapper clears its own log and delegates to inner. `cost_metrics` handles both forms. |
+| Error entries | If `inner.generate()` raises, an error entry `{"stage", "model", "status": "error", "error_type"}` is appended. No token or cost data in error entries. |
+| No retries | Wrapper re-raises all exceptions immediately; retry logic belongs in the caller. |
 
 ---
 
@@ -156,27 +180,24 @@ max_tokens)` for every LLM call.  After each method finishes, it calls
 
 ```python
 {
-    "stage":         str,    # e.g. "self_reflect", "verify_draft"
-    "model":         str,    # model id used
-    "input_tokens":  int,
-    "output_tokens": int,
-    "cost_usd":      float | None,
-    "latency_ms":    float | None,
-    "cache_hit":     bool | None,
+    "stage":            str,    # e.g. "self_reflect", "verify_draft"
+    "model":            str,    # model id used
+    "input_tokens":     int | None,
+    "output_tokens":    int | None,
+    "cost_usd":         float | None,
+    "latency_seconds":  float | None,   # C's native field; wrapper stores this
+    "cache_hit":        bool,           # always bool, never None (False = not cached)
 }
 ```
 
-If `drain_usage` is absent on the client, usage tracking is silently skipped
-(no crash).  If `cost_usd` is `None`, the cost module will attempt to
-re-derive it from `configs/model_pricing.json`; if the model is not in the
-pricing table the cost stays `None` (never fabricated).
+`UsageWrapper` stores `latency_seconds` directly (matching C's `LLMUsage`).
+`cost_metrics._accumulate` reads `latency_seconds` first and falls back to
+`latency_ms` for records written before Phase 2.
 
-**Usage field rules (item 7):**  C's `LLMUsage` uses `latency_seconds` (not `latency_ms`).
-E's `UsageWrapper` converts `latency_seconds → latency_ms` (× 1000) before storing
-in `ExperimentRecord.usage` entries so that `cost_metrics._accumulate` always
-sees `latency_ms`.  `cost_metrics._accumulate` also has a `latency_seconds` fallback
-(used when records were written without the wrapper).  All other fields (`cache_hit`,
-`input_tokens`, etc.) are stored verbatim.
+If `drain_usage` is absent on the client (e.g. `TrackingLLMClient`), the
+wrapper returns its own per-call log.  If `cost_usd` is `None`, the cost
+module re-derives it from `configs/model_pricing.json` (stays `None` if the
+model is not in the table — never fabricated).
 
 **GAP-4**: Resolved — C's LLMResponse confirmed from `feat/contracts-v0.1`.
 
@@ -239,6 +260,39 @@ For now, all Recall@k results use `QUESTION_CONDITIONED`.
 
 ---
 
+## ExperimentRecord field access (Phase 2 — nested structure)
+
+Phase 2 restructured `ExperimentRecord` to use nested dicts for draft and final:
+
+```python
+# Get the best available prediction for a record
+rec = records[0]
+final_answer = (rec.final or {}).get("final_answer") or (rec.draft or {}).get("short_answer")
+
+# Get the draft short_answer
+short_answer = (rec.draft or {}).get("short_answer")
+
+# Get the draft_id
+draft_id = (rec.draft or {}).get("draft_id")
+
+# M1: rec.final is None (no RevisionResult); answer is in rec.draft["short_answer"]
+# M2–M5: rec.final has {"draft_id", "feedback_id", "final_answer", "final_explanation"}
+
+# M4 evidence: dict keyed by draft_id
+m4_ev = rec.evidence  # {"<draft_id>": [{"doc_title": ..., "sentence_id": ..., ...}]}
+
+# M5 evidence: dict keyed by claim_id
+m5_ev = rec.evidence  # {"<claim_id>": [{"doc_title": ..., ...}]}
+
+# Model config (renamed from model_settings)
+config = rec.model_config
+
+# Raw calls audit log path
+raw_calls = rec.raw_calls_path  # e.g. "results/raw_calls.jsonl"
+```
+
+---
+
 ## Known gaps and owner table
 
 | Gap | Description | Owner | Priority |
@@ -249,6 +303,7 @@ For now, all Recall@k results use `QUESTION_CONDITIONED`.
 | GAP-5 | A's `DraftPort` method signatures unconfirmed | A | Medium |
 | GAP-6 | D's `configure()` must be called once before experiments | D | Medium |
 | GAP-7 | Claim→gold mapping needed for claim-conditioned Recall@k | B+C+E | Low |
+| GAP-8 | `drain_usage()` is E's extension, not in contracts/interfaces.py | C | Low |
 
 ---
 

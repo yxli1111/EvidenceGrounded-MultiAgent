@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any  # noqa: F401 (used in aggregate_usage_by_method)
 
 _DEFAULT_PRICING_PATH = (
     Path(__file__).resolve().parents[2] / "configs" / "model_pricing.json"
@@ -102,7 +102,6 @@ def _accumulate(
         in_tok = call.get("input_tokens")
         out_tok = call.get("output_tokens")
         cost = call.get("cost_usd")
-        lat = call.get("latency_ms")
         model = call.get("model", "")
         cache = call.get("cache_hit")
 
@@ -127,10 +126,12 @@ def _accumulate(
                 acc["cost_usd_sum"] = (acc["cost_usd_sum"] or 0.0) + cost
                 acc["n_calls_with_cost"] += 1
 
-        if lat is None:
-            lat_s = call.get("latency_seconds")
-            if lat_s is not None:
-                lat = lat_s * 1000.0
+        # Prefer latency_seconds (contracts.LLMUsage native field); fall back to latency_ms
+        lat_s = call.get("latency_seconds")
+        if lat_s is not None:
+            lat = lat_s * 1000.0
+        else:
+            lat = call.get("latency_ms")
         if lat is not None:
             acc["_latency_sum"] += lat
             acc["n_calls_with_latency"] += 1
@@ -213,12 +214,53 @@ def aggregate_usage_by_method(
 
     Returns:
         dict[method_id, summary_dict].  Methods with zero records are omitted.
+        Each summary includes:
+          - n_records: count of unique (example_id, method_id) pairs (deduped)
+          - attempts_total: total records including retries
+          - cost_usd_sum: cost from final-attempt ok records only
+          - total_cost_usd: cost across ALL attempts (ok + error)
+          - final_attempt_cost_usd: same as cost_usd_sum (backward compat alias)
+          - retry_waste_cost_usd: total_cost_usd - cost_usd_sum
     """
     if pricing is None:
         pricing = {}
-    buckets: dict[str, dict] = {}
+
+    # --- Pass 1: ALL records — for attempts_total and total_cost_usd ---
+    attempts_total_by_method: dict[str, int] = {}
+    total_cost_by_method: dict[str, Any] = {}
 
     for rec in records:
+        mid = _get(rec, "method_id") or "UNKNOWN"
+        attempts_total_by_method[mid] = attempts_total_by_method.get(mid, 0) + 1
+        if mid not in total_cost_by_method:
+            total_cost_by_method[mid] = None
+        all_calls = list(_get(rec, "usage") or [])
+        if include_draft_usage:
+            all_calls.extend(_get(rec, "draft_usage") or [])
+        for call in all_calls:
+            cost = call.get("cost_usd")
+            if cost is None and pricing:
+                cost = compute_cost_from_tokens(
+                    call.get("input_tokens"), call.get("output_tokens"),
+                    call.get("model", ""), pricing,
+                )
+            if cost is not None:
+                total_cost_by_method[mid] = (total_cost_by_method[mid] or 0.0) + cost
+
+    # --- Pass 2: dedup to highest attempt per (example_id, method_id) ---
+    latest_map: dict[tuple, Any] = {}
+    for rec in records:
+        mid = _get(rec, "method_id") or "UNKNOWN"
+        eid = _get(rec, "example_id") or ""
+        attempt = _get(rec, "attempt") or 1
+        key = (eid, mid)
+        if key not in latest_map or attempt > (_get(latest_map[key], "attempt") or 1):
+            latest_map[key] = rec
+
+    # --- Pass 3: accumulate deduped records ---
+    buckets: dict[str, dict] = {}
+
+    for rec in latest_map.values():
         mid = _get(rec, "method_id") or "UNKNOWN"
         if mid not in buckets:
             buckets[mid] = _blank_acc()
@@ -228,7 +270,6 @@ def aggregate_usage_by_method(
         status = _get(rec, "status") or "error"
         if status != "ok":
             acc["n_error"] += 1
-            # Accumulate error record's usage into separate error cost bucket
             for call in (_get(rec, "usage") or []):
                 acc["_error_calls"] += 1
                 cost = call.get("cost_usd")
@@ -245,7 +286,23 @@ def aggregate_usage_by_method(
         for calls in _usage_lists(rec, include_draft_usage):
             _accumulate(acc, calls, pricing)
 
-    return {mid: _finalise(acc, mid) for mid, acc in buckets.items()}
+    # --- Build result ---
+    result = {}
+    for mid, acc in buckets.items():
+        summary = _finalise(acc, mid)
+        summary["attempts_total"] = attempts_total_by_method.get(mid, acc["n_records"])
+        total_cost = total_cost_by_method.get(mid)
+        summary["total_cost_usd"] = total_cost
+        # final_attempt_cost_usd = cost_usd_sum (already deduped to final attempt)
+        final_cost = summary["cost_usd_sum"]
+        summary["final_attempt_cost_usd"] = final_cost
+        if total_cost is not None and final_cost is not None:
+            summary["retry_waste_cost_usd"] = total_cost - final_cost
+        else:
+            summary["retry_waste_cost_usd"] = None
+        result[mid] = summary
+
+    return result
 
 
 def aggregate_draft_usage(

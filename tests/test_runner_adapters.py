@@ -496,9 +496,14 @@ class TestContractEvidenceRetrieverDirect:
         runner.run([make_synthetic_example("e1")], out)
         records = {r.method_id: r for r in load_records(out)}
 
-        m4_ev = records["M4"].evidence
-        assert len(m4_ev) >= 1
-        ev = m4_ev[0]
+        # Phase 2: M4 evidence is a dict keyed by draft_id
+        m4_ev_dict = records["M4"].evidence
+        assert isinstance(m4_ev_dict, dict), f"M4 evidence must be a dict, got {type(m4_ev_dict)}"
+        assert len(m4_ev_dict) >= 1
+        # Get the evidence list from the first (and only) key
+        ev_list = next(iter(m4_ev_dict.values()))
+        assert len(ev_list) >= 1
+        ev = ev_list[0]
         assert "doc_title" in ev
         assert "score" in ev
         assert ev["score"] == pytest.approx(0.99)

@@ -10,6 +10,7 @@ None inputs are treated as empty strings.
 """
 
 import csv
+import json
 import pathlib
 import re
 import string
@@ -75,6 +76,49 @@ def token_f1(prediction: str | None, gold: str | None) -> float:
     return (2 * precision * recall) / (precision + recall)
 
 
+def _get_pred(rec) -> str:
+    """Extract the best available prediction from a record (dict or object).
+
+    Prefers final["final_answer"] (new nested structure), falls back to
+    draft["short_answer"] (also new nested), then legacy flat fields.
+    M1 has final=None by design; falls back to draft.short_answer.
+    """
+    if isinstance(rec, dict):
+        final = rec.get("final") or {}
+        draft = rec.get("draft") or {}
+        if isinstance(final, dict) and final.get("final_answer"):
+            return final["final_answer"]
+        if isinstance(draft, dict) and draft.get("short_answer"):
+            return draft["short_answer"]
+        # Legacy flat field fallback
+        return rec.get("final_answer") or rec.get("short_answer") or ""
+    else:  # ExperimentRecord object
+        final = getattr(rec, "final", None) or {}
+        draft = getattr(rec, "draft", None) or {}
+        if isinstance(final, dict) and final.get("final_answer"):
+            return final["final_answer"]
+        if isinstance(draft, dict) and draft.get("short_answer"):
+            return draft["short_answer"]
+        # Legacy flat field fallback
+        return getattr(rec, "final_answer", None) or getattr(rec, "short_answer", None) or ""
+
+
+def _get_draft_pred(rec) -> str:
+    """Extract the draft short_answer for draft_em computation."""
+    if isinstance(rec, dict):
+        draft = rec.get("draft") or {}
+        if isinstance(draft, dict) and draft.get("short_answer"):
+            return draft["short_answer"]
+        # Legacy flat field fallback
+        return rec.get("short_answer") or ""
+    else:
+        draft = getattr(rec, "draft", None) or {}
+        if isinstance(draft, dict) and draft.get("short_answer"):
+            return draft["short_answer"]
+        # Legacy flat field fallback
+        return getattr(rec, "short_answer", None) or ""
+
+
 def compute_em_f1_batch(
     records: list[dict],
     gold_lookup: dict[str, dict],
@@ -83,7 +127,8 @@ def compute_em_f1_batch(
 
     Args:
         records: list of ExperimentRecord dicts with keys
-                 example_id, method_id, status, final_answer.
+                 example_id, method_id, status, and either nested
+                 final/draft dicts or legacy flat fields.
                  Records with status != "ok" count as 0 in both numerator
                  and denominator (failure stays in denominator).
         gold_lookup: maps example_id -> {"gold_answer": str, ...}
@@ -94,17 +139,32 @@ def compute_em_f1_batch(
     """
     from collections import defaultdict
 
+    # Dedup: keep highest attempt per (example_id, method_id)
+    seen: dict[tuple, dict] = {}
+    for rec in records:
+        key = (
+            rec.get("example_id") if isinstance(rec, dict) else getattr(rec, "example_id", ""),
+            rec.get("method_id") if isinstance(rec, dict) else getattr(rec, "method_id", ""),
+        )
+        attempt = rec.get("attempt", 1) if isinstance(rec, dict) else getattr(rec, "attempt", 1)
+        if key not in seen or attempt > (
+            seen[key].get("attempt", 1) if isinstance(seen[key], dict) else getattr(seen[key], "attempt", 1)
+        ):
+            seen[key] = rec
+    deduped = list(seen.values())
+
     buckets: dict[str, dict] = defaultdict(
         lambda: {"em_sum": 0.0, "f1_sum": 0.0, "n": 0, "n_ok": 0, "n_error": 0}
     )
 
-    for rec in records:
-        mid = rec["method_id"]
-        eid = rec["example_id"]
+    for rec in deduped:
+        mid = rec["method_id"] if isinstance(rec, dict) else getattr(rec, "method_id", "")
+        eid = rec["example_id"] if isinstance(rec, dict) else getattr(rec, "example_id", "")
+        status = rec.get("status") if isinstance(rec, dict) else getattr(rec, "status", "error")
         bucket = buckets[mid]
         bucket["n"] += 1
 
-        if rec.get("status") != "ok":
+        if status != "ok":
             bucket["n_error"] += 1
             # failed sample contributes 0 to numerator, still counted in denominator
             continue
@@ -112,9 +172,9 @@ def compute_em_f1_batch(
         bucket["n_ok"] += 1
         gold_entry = gold_lookup.get(eid)
         gold = _gold_get(gold_entry, "gold_answer", "") if gold_entry is not None else ""
-        pred = rec.get("final_answer") or ""
+        pred = _get_pred(rec)
         bucket["em_sum"] += exact_match(pred, gold)
-        bucket["f1_sum"] += token_f1(pred, gold)  # pred already "" if None
+        bucket["f1_sum"] += token_f1(pred, gold)
 
     result = {}
     for mid, b in buckets.items():
@@ -133,27 +193,68 @@ def export_per_example_csv(
     records: list[dict],
     gold_lookup: dict[str, dict],
     output_path: str = "results/evaluation/per_example.csv",
+    preliminary: bool = True,
+    omitted_metrics: list[str] | None = None,
+    split: str | None = None,
+    manifest: str | None = None,
 ) -> str:
     """Export per-example EM/F1 scores to a CSV file.
+
+    Deduplicates records by keeping the highest-attempt record per
+    (example_id, method_id) pair so that retry runs are not double-counted.
+
+    Writes a metadata.json file alongside the CSV containing the preliminary
+    flag, sample count (n), and optional split/manifest/omitted_metrics info.
 
     Args:
         records: list of ExperimentRecord dicts.
         gold_lookup: maps example_id -> {"gold_answer": str, ...}.
         output_path: destination path (created with parent dirs as needed).
+        preliminary: flag written to metadata.json.
+        omitted_metrics: list of metric names omitted from this run.
+        split: optional split label for metadata.json.
+        manifest: optional manifest file path for metadata.json.
 
     Returns:
-        Absolute path of the written file.
+        Absolute path of the written CSV file.
 
     Columns: example_id, method_id, status, em, f1, draft_em, question_type
     """
     out = pathlib.Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
 
+    # Dedup: keep highest attempt per (example_id, method_id)
+    seen: dict = {}
+    for rec in records:
+        eid = rec.get("example_id", "") if isinstance(rec, dict) else getattr(rec, "example_id", "")
+        mid = rec.get("method_id", "") if isinstance(rec, dict) else getattr(rec, "method_id", "")
+        attempt = (rec.get("attempt", 1) if isinstance(rec, dict) else getattr(rec, "attempt", 1)) or 1
+        key = (eid, mid)
+        existing = seen.get(key)
+        if existing is None:
+            seen[key] = rec
+        else:
+            ex_attempt = (existing.get("attempt", 1) if isinstance(existing, dict) else getattr(existing, "attempt", 1)) or 1
+            if attempt > ex_attempt:
+                seen[key] = rec
+    deduped = list(seen.values())
+
+    # Write metadata.json alongside the CSV
+    meta: dict = {"preliminary": preliminary, "n": len(deduped)}
+    if omitted_metrics is not None:
+        meta["omitted_metrics"] = omitted_metrics
+    if split is not None:
+        meta["split"] = split
+    if manifest is not None:
+        meta["manifest"] = manifest
+    meta_path = out.parent / "metadata.json"
+    meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+
     with open(out, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["example_id", "method_id", "status", "em", "f1",
                           "draft_em", "question_type"])
-        for rec in records:
+        for rec in deduped:
             eid = rec.get("example_id", "") if isinstance(rec, dict) else getattr(rec, "example_id", "")
             mid = rec.get("method_id", "") if isinstance(rec, dict) else getattr(rec, "method_id", "")
             status = rec.get("status", "") if isinstance(rec, dict) else getattr(rec, "status", "")
@@ -164,8 +265,8 @@ def export_per_example_csv(
             if status != "ok":
                 em_val = f1_val = draft_em_val = 0.0
             else:
-                pred = (rec.get("final_answer") if isinstance(rec, dict) else getattr(rec, "final_answer", None)) or ""
-                draft_pred = (rec.get("short_answer") if isinstance(rec, dict) else getattr(rec, "short_answer", None)) or ""
+                pred = _get_pred(rec)
+                draft_pred = _get_draft_pred(rec)
                 em_val = exact_match(pred, gold_answer)
                 f1_val = token_f1(pred, gold_answer)
                 draft_em_val = exact_match(draft_pred, gold_answer)

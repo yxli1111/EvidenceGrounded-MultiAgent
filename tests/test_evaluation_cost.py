@@ -471,3 +471,99 @@ class TestCacheHitCost:
         result = aggregate_usage_by_method(records)
         assert result["M4"]["cost_usd_sum"] == pytest.approx(0.003)
         assert result["M4"]["cached_cost_sum"] is None
+
+
+# ---------------------------------------------------------------------------
+# Item 3: dedup, attempts_total, total_cost_usd
+# ---------------------------------------------------------------------------
+
+def _rec_a(eid="e1", mid="M4", status="ok", usage=None, draft_usage=None, attempt=1):
+    """Extended _rec with explicit attempt field."""
+    return {
+        "example_id": eid,
+        "method_id": mid,
+        "status": status,
+        "attempt": attempt,
+        "usage": usage or [],
+        "draft_usage": draft_usage or [],
+    }
+
+
+class TestAggregateDedup:
+    def test_attempts_total_key_present(self):
+        """attempts_total must be present in output."""
+        records = [_rec("e1", "M4", usage=[_call(cost=0.001)])]
+        result = aggregate_usage_by_method(records)
+        assert "attempts_total" in result["M4"]
+
+    def test_total_cost_usd_key_present(self):
+        """total_cost_usd must be present in output."""
+        records = [_rec("e1", "M4", usage=[_call(cost=0.001)])]
+        result = aggregate_usage_by_method(records)
+        assert "total_cost_usd" in result["M4"]
+
+    def test_n_records_deduped_on_retry(self):
+        """Two attempts for same (eid, mid): n_records=1 after dedup."""
+        records = [
+            _rec_a("e1", "M4", usage=[_call(cost=0.001)], attempt=1),
+            _rec_a("e1", "M4", usage=[_call(cost=0.002)], attempt=2),
+        ]
+        result = aggregate_usage_by_method(records)
+        m4 = result["M4"]
+        assert m4["n_records"] == 1, "n_records must be deduped count"
+        assert m4["attempts_total"] == 2
+
+    def test_cost_usd_sum_uses_highest_attempt(self):
+        """cost_usd_sum reflects only the highest (final) attempt per pair."""
+        records = [
+            _rec_a("e1", "M4", usage=[_call(cost=0.001)], attempt=1),
+            _rec_a("e1", "M4", usage=[_call(cost=0.002)], attempt=2),
+        ]
+        result = aggregate_usage_by_method(records)
+        assert result["M4"]["cost_usd_sum"] == pytest.approx(0.002)
+
+    def test_total_cost_usd_includes_all_attempts(self):
+        """total_cost_usd = sum across ALL attempts (not just final)."""
+        records = [
+            _rec_a("e1", "M4", usage=[_call(cost=0.001)], attempt=1),
+            _rec_a("e1", "M4", usage=[_call(cost=0.002)], attempt=2),
+        ]
+        result = aggregate_usage_by_method(records)
+        assert result["M4"]["total_cost_usd"] == pytest.approx(0.003)
+
+    def test_retry_waste_cost_usd_on_retry(self):
+        """retry_waste = total_cost_usd - cost_usd_sum (earlier attempt cost)."""
+        records = [
+            _rec_a("e1", "M4", usage=[_call(cost=0.001)], attempt=1),
+            _rec_a("e1", "M4", usage=[_call(cost=0.002)], attempt=2),
+        ]
+        result = aggregate_usage_by_method(records)
+        assert result["M4"]["retry_waste_cost_usd"] == pytest.approx(0.001)
+
+    def test_no_retry_gives_zero_waste(self):
+        """With unique pairs and no retries, retry_waste should be 0."""
+        records = [
+            _rec_a("e1", "M4", usage=[_call(cost=0.002)], attempt=1),
+            _rec_a("e2", "M4", usage=[_call(cost=0.003)], attempt=1),
+        ]
+        result = aggregate_usage_by_method(records)
+        assert result["M4"]["retry_waste_cost_usd"] == pytest.approx(0.0)
+
+    def test_attempts_total_no_retry(self):
+        """With 2 unique pairs, attempts_total=2 and n_records=2."""
+        records = [
+            _rec_a("e1", "M4", usage=[_call(cost=0.001)], attempt=1),
+            _rec_a("e2", "M4", usage=[_call(cost=0.001)], attempt=1),
+        ]
+        result = aggregate_usage_by_method(records)
+        assert result["M4"]["attempts_total"] == 2
+        assert result["M4"]["n_records"] == 2
+
+    def test_total_cost_includes_error_records(self):
+        """total_cost_usd sums ok + error records (all attempts)."""
+        records = [
+            _rec_a("e1", "M4", usage=[_call(cost=0.002)], attempt=1),
+            _rec_a("e2", "M4", status="error", usage=[_call(cost=0.001)], attempt=1),
+        ]
+        result = aggregate_usage_by_method(records)
+        assert result["M4"]["total_cost_usd"] == pytest.approx(0.003)

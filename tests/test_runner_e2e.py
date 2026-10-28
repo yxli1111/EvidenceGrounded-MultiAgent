@@ -122,7 +122,7 @@ class TestSharedDraft:
         example = make_synthetic_example("e99")
         runner.run([example], output_file)
         records = load_records(output_file)
-        draft_ids = {r.draft_id for r in records}
+        draft_ids = {(r.draft or {}).get("draft_id") for r in records}
         assert len(draft_ids) == 1, f"Expected one shared draft_id, got: {draft_ids}"
 
 
@@ -142,7 +142,10 @@ class TestJsonlRoundTrip:
             assert orig.example_id == load.example_id
             assert orig.method_id == load.method_id
             assert orig.status == load.status
-            assert orig.final_answer == load.final_answer
+            # Use nested field access for Phase 2 structure
+            orig_ans = (orig.final or {}).get("final_answer") or (orig.draft or {}).get("short_answer")
+            load_ans = (load.final or {}).get("final_answer") or (load.draft or {}).get("short_answer")
+            assert orig_ans == load_ans
 
     def test_every_line_is_valid_json(self, runner, three_examples, output_file):
         runner.run(three_examples, output_file)
@@ -272,12 +275,15 @@ class TestRecordFields:
 
     def test_m1_final_equals_draft(self):
         r = self.records["M1"]
-        assert r.final_answer == r.short_answer
-        assert r.final_explanation == r.explanation
+        # M1: final must be None; answer comes from draft.short_answer
+        assert r.final is None, f"M1 final must be None, got {r.final}"
+        assert r.draft is not None
+        assert r.draft.get("short_answer") is not None
 
     def test_m2_has_revised_answer(self):
         r = self.records["M2"]
-        assert r.final_answer is not None
+        assert r.final is not None
+        assert r.final.get("final_answer") is not None
         assert r.feedback is not None
         assert r.feedback["feedback_id"].endswith(":self-reflect")
 
@@ -289,22 +295,27 @@ class TestRecordFields:
 
     def test_m4_has_evidence_list(self):
         r = self.records["M4"]
-        assert r.evidence is not None
+        # M4 evidence is a dict keyed by draft_id
+        assert isinstance(r.evidence, dict), f"M4 evidence must be a dict, got {type(r.evidence)}"
         assert len(r.evidence) > 0
-        for ev in r.evidence:
-            assert "doc_title" in ev
-            assert "sentence_id" in ev
+        for _key, ev_list in r.evidence.items():
+            assert len(ev_list) > 0
+            for ev in ev_list:
+                assert "doc_title" in ev
+                assert "sentence_id" in ev
 
     def test_m5_has_claims_and_evidence_by_claim(self):
         r = self.records["M5"]
         assert r.claims is not None and len(r.claims) > 0
-        assert r.evidence_by_claim is not None
+        # M5 evidence is a dict keyed by claim_id (no separate evidence_by_claim)
+        assert isinstance(r.evidence, dict), f"M5 evidence must be a dict, got {type(r.evidence)}"
         claim_ids = {c["claim_id"] for c in r.claims}
-        assert set(r.evidence_by_claim.keys()) == claim_ids
+        assert set(r.evidence.keys()) == claim_ids
 
     def test_all_records_have_draft_id(self):
         for mid, r in self.records.items():
-            assert r.draft_id is not None, f"{mid} missing draft_id"
+            assert r.draft is not None, f"{mid} missing draft"
+            assert r.draft.get("draft_id") is not None, f"{mid} missing draft.draft_id"
 
     def test_all_records_have_question(self):
         for mid, r in self.records.items():
@@ -353,6 +364,8 @@ class TestUsageTracking:
 
     def test_usage_entries_have_required_keys(self):
         # latency field is latency_seconds (contracts.LLMUsage) not latency_ms
+        # When UsageWrapper wraps MockLLMClient (which has drain_usage),
+        # drain delegates to inner, returning inner's records with latency_seconds.
         required = {"stage", "model", "input_tokens", "output_tokens",
                     "cost_usd", "latency_seconds", "cache_hit"}
         for r in self.records.values():

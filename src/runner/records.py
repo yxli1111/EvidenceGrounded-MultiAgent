@@ -8,9 +8,19 @@ Design notes
   method-specific LLM calls.  Separating them avoids 5× double-counting
   when computing total-run cost; P3 cost analysis decides how to allocate.
 * A record with status="error" has None for most output fields but still
-  appears in every denominator — failures are never silently dropped.
+  appears in every metric denominator — failures are never silently dropped.
 * status="skipped" is reserved for examples explicitly excluded before
   running (e.g. dev/eval boundary enforcement); it also counts in denominators.
+
+Field naming conventions (Phase 2 alignment)
+---------------------------------------------
+* draft: dict | None — AnswerDraft snapshot {"draft_id", "short_answer", "explanation"}
+* final: dict | None — RevisionResult snapshot {"draft_id", "feedback_id",
+  "final_answer", "final_explanation"}.  M1 MUST be None (no RevisionResult).
+* evidence: dict — keyed by target ID.  M4: {draft_id: [Evidence dicts]}.
+  M5: {claim_id: [Evidence dicts]}.  Empty dict when no evidence.
+* model_config: renamed from model_settings (Phase 2 alignment with contracts).
+* raw_calls_path: relative path to raw_calls.jsonl alongside the run output.
 """
 
 from __future__ import annotations
@@ -37,30 +47,28 @@ class ExperimentRecord:
     # Input snapshot (for debugging without re-loading dataset)
     question: str = ""
 
-    # AnswerDraft (shared across all methods for same example)
-    draft_id: str | None = None
-    short_answer: str | None = None
-    explanation: str | None = None
+    # AnswerDraft snapshot: {"draft_id": str, "short_answer": str, "explanation": str}
+    draft: dict | None = None
 
-    # Final output after revision (equals draft for M1)
-    final_answer: str | None = None
-    final_explanation: str | None = None
+    # RevisionResult snapshot: {"draft_id", "feedback_id", "final_answer", "final_explanation"}
+    # M1 MUST be None (no RevisionResult in contract)
+    final: dict | None = None
 
-    # Intermediate data (serialised to plain dicts)
+    # Intermediate data
     claims: list[dict] | None = None            # AtomicClaims (M5)
-    evidence: list[dict] | None = None          # retrieved evidence:
-                                                #   M4 = whole-draft evidence
-                                                #   M5 = all-claim evidence, flat+deduped
-    evidence_by_claim: dict | None = None       # M5 only: {claim_id: [Evidence dicts]}
+
+    # Evidence keyed by target: M4 = {draft_id: [...]}, M5 = {claim_id: [...]}
+    evidence: dict = field(default_factory=dict)
+
     feedback: dict | None = None                # VerificationFeedback (M3/M4/M5)
 
     # LLM usage (list of per-call dicts with keys:
-    #   stage, model, input_tokens, output_tokens, cost_usd, latency_ms, cache_hit)
+    #   stage, model, input_tokens, output_tokens, cost_usd, latency_seconds, cache_hit)
     draft_usage: list[dict] = field(default_factory=list)  # generate_draft call
     usage: list[dict] = field(default_factory=list)        # method-specific calls
 
     # Run metadata
-    model_settings: dict | None = None
+    model_config: dict | None = None
     prompt_versions: dict | None = None
 
     # Error details (populated when status="error")
@@ -73,6 +81,9 @@ class ExperimentRecord:
     # Retry tracking: attempt 1 = first run; incremented on each retry
     attempt: int = 1
 
+    # Reference to raw_calls.jsonl (relative path)
+    raw_calls_path: str | None = None
+
 
 # ---------------------------------------------------------------------------
 # Serialisation helpers
@@ -84,7 +95,63 @@ def to_jsonl_line(record: ExperimentRecord) -> str:
 
 def from_jsonl_line(line: str) -> ExperimentRecord:
     data = json.loads(line)
-    data.setdefault("attempt", 1)  # backward compat: old records have no attempt field
+    data.setdefault("attempt", 1)
+    data.setdefault("raw_calls_path", None)
+
+    # Migrate flat draft fields → draft dict
+    if "draft" not in data:
+        did = data.pop("draft_id", None)
+        sa  = data.pop("short_answer", None)
+        ex  = data.pop("explanation", None)
+        data["draft"] = {"draft_id": did, "short_answer": sa, "explanation": ex} if did else None
+    else:
+        data.pop("draft_id", None)
+        data.pop("short_answer", None)
+        data.pop("explanation", None)
+
+    # Migrate flat final fields → final dict
+    if "final" not in data:
+        fa = data.pop("final_answer", None)
+        fe = data.pop("final_explanation", None)
+        if data.get("method_id") == "M1":
+            data["final"] = None
+        elif fa is not None or fe is not None:
+            draft_id_val = (data.get("draft") or {}).get("draft_id", "")
+            data["final"] = {"draft_id": draft_id_val, "feedback_id": "", "final_answer": fa, "final_explanation": fe}
+        else:
+            data["final"] = None
+    else:
+        data.pop("final_answer", None)
+        data.pop("final_explanation", None)
+
+    # Migrate evidence list + evidence_by_claim → evidence dict
+    if "evidence" in data and isinstance(data["evidence"], list):
+        ev_list = data.pop("evidence") or []
+        ev_by_claim = data.pop("evidence_by_claim", None)
+        mid = data.get("method_id", "")
+        if mid == "M5" and ev_by_claim:
+            data["evidence"] = ev_by_claim
+        elif mid == "M4":
+            draft_id_val = (data.get("draft") or {}).get("draft_id", "_m4")
+            data["evidence"] = {draft_id_val: ev_list} if ev_list else {}
+        else:
+            data["evidence"] = {"_legacy": ev_list} if ev_list else {}
+    elif "evidence" not in data:
+        ev_by_claim = data.pop("evidence_by_claim", None)
+        data["evidence"] = ev_by_claim if ev_by_claim else {}
+    else:
+        data.pop("evidence_by_claim", None)
+
+    # Migrate model_settings → model_config
+    if "model_config" not in data and "model_settings" in data:
+        data["model_config"] = data.pop("model_settings")
+    else:
+        data.pop("model_settings", None)
+
+    # Filter to only known fields (prevents TypeError on unrecognised keys from old records)
+    valid = {f.name for f in dataclasses.fields(ExperimentRecord)}
+    data = {k: v for k, v in data.items() if k in valid}
+
     return ExperimentRecord(**data)
 
 
@@ -146,7 +213,7 @@ def make_error_record(
     method_id: str,
     error_msg: str,
     question: str = "",
-    model_settings: dict | None = None,
+    model_config: dict | None = None,
 ) -> ExperimentRecord:
     return ExperimentRecord(
         example_id=example_id,
@@ -155,7 +222,110 @@ def make_error_record(
         timestamp=_now_iso(),
         question=question,
         error=error_msg,
-        model_settings=model_settings,
+        model_config=model_config,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Conversion to contracts.schemas.ExperimentRecord
+# ---------------------------------------------------------------------------
+
+def to_contract_record(rec: "ExperimentRecord"):
+    """Convert E's ExperimentRecord to contracts.schemas.ExperimentRecord.
+
+    Requires contracts.schemas to be importable (from origin/feat/contracts-v0.1).
+    Raises ImportError if the contracts package is not on sys.path.
+
+    M1: final=None (no RevisionResult).
+    Evidence dict values are converted from plain dicts to Evidence objects.
+    Usage list is converted from plain dicts to LLMUsage objects.
+    """
+    try:
+        from contracts import schemas
+    except ImportError as exc:
+        raise ImportError(
+            "contracts.schemas is required for to_contract_record(); "
+            "merge origin/feat/contracts-v0.1 or add contracts/ to sys.path."
+        ) from exc
+
+    # draft
+    draft = None
+    if rec.draft:
+        draft = schemas.AnswerDraft(
+            draft_id=rec.draft.get("draft_id", ""),
+            short_answer=rec.draft.get("short_answer", ""),
+            explanation=rec.draft.get("explanation", ""),
+        )
+
+    # final (M1 keeps None)
+    final = None
+    if rec.final:
+        final = schemas.RevisionResult(
+            draft_id=rec.final.get("draft_id", ""),
+            feedback_id=rec.final.get("feedback_id", ""),
+            final_answer=rec.final.get("final_answer", ""),
+            final_explanation=rec.final.get("final_explanation", ""),
+        )
+
+    # claims
+    claims = []
+    for c in (rec.claims or []):
+        if isinstance(c, dict):
+            claims.append(schemas.AtomicClaim(
+                claim_id=c.get("claim_id", ""),
+                claim_text=c.get("claim_text", ""),
+                source_span=c.get("source_span"),
+            ))
+        else:
+            claims.append(c)
+
+    # evidence: dict[str, list[Evidence]]
+    evidence: dict = {}
+    for key, ev_list in (rec.evidence or {}).items():
+        converted = []
+        for e in (ev_list or []):
+            if isinstance(e, dict):
+                converted.append(schemas.Evidence(
+                    doc_title=e.get("doc_title", ""),
+                    sentence_id=e.get("sentence_id", 0),
+                    text=e.get("text", ""),
+                    score=e.get("score", 0.0),
+                    retrieval_query=e.get("retrieval_query", ""),
+                    rank=e.get("rank", 0),
+                ))
+            else:
+                converted.append(e)
+        evidence[key] = converted
+
+    # usage
+    usage = []
+    for u in (rec.usage or []):
+        if isinstance(u, dict):
+            usage.append(schemas.LLMUsage(
+                stage=u.get("stage", ""),
+                model=u.get("model", ""),
+                input_tokens=u.get("input_tokens"),
+                output_tokens=u.get("output_tokens"),
+                cost_usd=u.get("cost_usd"),
+                latency_seconds=u.get("latency_seconds"),
+                cache_hit=bool(u.get("cache_hit", False)),
+            ))
+        else:
+            usage.append(u)
+
+    return schemas.ExperimentRecord(
+        example_id=rec.example_id,
+        method_id=rec.method_id,
+        status=rec.status,
+        draft=draft,
+        final=final,
+        claims=claims,
+        evidence=evidence,
+        feedback=None,  # E stores feedback as plain dict; full conversion is Phase 3
+        usage=usage,
+        model_config=rec.model_config or {},
+        prompt_versions=rec.prompt_versions or {},
+        error=rec.error,
     )
 
 
