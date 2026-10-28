@@ -11,7 +11,7 @@ class SQLiteCache:
     def __init__(
         self,
         db_path: str = "cache/llm_cache.db",
-        ttl_seconds: int = 86400,
+        ttl_seconds: int = 604800,
     ):
         if ttl_seconds <= 0:
             raise ValueError("TTL must be positive")
