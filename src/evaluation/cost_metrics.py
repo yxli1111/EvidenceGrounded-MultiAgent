@@ -127,6 +127,10 @@ def _accumulate(
                 acc["cost_usd_sum"] = (acc["cost_usd_sum"] or 0.0) + cost
                 acc["n_calls_with_cost"] += 1
 
+        if lat is None:
+            lat_s = call.get("latency_seconds")
+            if lat_s is not None:
+                lat = lat_s * 1000.0
         if lat is not None:
             acc["_latency_sum"] += lat
             acc["n_calls_with_latency"] += 1

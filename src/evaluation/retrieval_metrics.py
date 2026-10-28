@@ -31,9 +31,19 @@ class RecallDenominator(Enum):
     CLAIM_CONDITIONED = "claim_conditioned"
 
 
-def _gold_set(gold_supporting_facts: list[dict]) -> set[tuple]:
-    """Convert gold facts (key 'title') to (title, sentence_id) tuples."""
-    return {(f["title"], f["sentence_id"]) for f in gold_supporting_facts}
+def _gold_set(gold_supporting_facts: list) -> set[tuple]:
+    """Convert gold facts to (title, sentence_id) tuples.
+
+    Accepts both dict format {"title": str, "sentence_id": int} (B's format)
+    and tuple format (str, int) (contracts.QAGold format).
+    """
+    result: set[tuple] = set()
+    for f in gold_supporting_facts:
+        if isinstance(f, tuple):
+            result.add((f[0], f[1]))
+        else:
+            result.add((f["title"], f["sentence_id"]))
+    return result
 
 
 def _predicted_set(retrieved: list[dict], k: int) -> set[tuple]:

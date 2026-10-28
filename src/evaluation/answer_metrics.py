@@ -9,6 +9,8 @@ the score is 1.0 iff the strings match exactly after normalization, else 0.0.
 None inputs are treated as empty strings.
 """
 
+import csv
+import pathlib
 import re
 import string
 from collections import Counter
@@ -117,3 +119,50 @@ def compute_em_f1_batch(
             "n_error": b["n_error"],
         }
     return result
+
+
+def export_per_example_csv(
+    records: list[dict],
+    gold_lookup: dict[str, dict],
+    output_path: str = "results/evaluation/per_example.csv",
+) -> str:
+    """Export per-example EM/F1 scores to a CSV file.
+
+    Args:
+        records: list of ExperimentRecord dicts.
+        gold_lookup: maps example_id -> {"gold_answer": str, ...}.
+        output_path: destination path (created with parent dirs as needed).
+
+    Returns:
+        Absolute path of the written file.
+
+    Columns: example_id, method_id, status, em, f1, draft_em, question_type
+    """
+    out = pathlib.Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(out, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["example_id", "method_id", "status", "em", "f1",
+                          "draft_em", "question_type"])
+        for rec in records:
+            eid = rec.get("example_id", "") if isinstance(rec, dict) else getattr(rec, "example_id", "")
+            mid = rec.get("method_id", "") if isinstance(rec, dict) else getattr(rec, "method_id", "")
+            status = rec.get("status", "") if isinstance(rec, dict) else getattr(rec, "status", "")
+            qt = rec.get("question_type") if isinstance(rec, dict) else getattr(rec, "question_type", None)
+
+            gold_answer = gold_lookup.get(eid, {}).get("gold_answer", "")
+            if status != "ok":
+                em_val = f1_val = draft_em_val = 0.0
+            else:
+                pred = (rec.get("final_answer") if isinstance(rec, dict) else getattr(rec, "final_answer", None)) or ""
+                draft_pred = (rec.get("short_answer") if isinstance(rec, dict) else getattr(rec, "short_answer", None)) or ""
+                em_val = exact_match(pred, gold_answer)
+                f1_val = token_f1(pred, gold_answer)
+                draft_em_val = exact_match(draft_pred, gold_answer)
+
+            writer.writerow([eid, mid, status,
+                              f"{em_val:.4f}", f"{f1_val:.4f}", f"{draft_em_val:.4f}",
+                              qt or ""])
+
+    return str(out.resolve())

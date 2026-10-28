@@ -352,8 +352,9 @@ class TestUsageTracking:
         assert "revise_answer" in stages
 
     def test_usage_entries_have_required_keys(self):
+        # latency field is latency_seconds (contracts.LLMUsage) not latency_ms
         required = {"stage", "model", "input_tokens", "output_tokens",
-                    "cost_usd", "latency_ms", "cache_hit"}
+                    "cost_usd", "latency_seconds", "cache_hit"}
         for r in self.records.values():
             for entry in r.usage + r.draft_usage:
                 assert required.issubset(entry.keys()), (
@@ -374,7 +375,7 @@ class TestErrorRecordPreservesUsage:
         class BrokenAfterLLMCall(MockDraftPort):
             def self_reflect(self, example, draft, llm):
                 # Call LLM first, then raise
-                llm.generate("self_reflect", [], getattr(llm, "model", "mock"), 0.0, 512)
+                llm.generate(stage="self_reflect", messages=[], model=getattr(llm, "model", "mock"), temperature=0.0, max_tokens=512)
                 raise RuntimeError("M2 fails after LLM call")
 
         ports["draft_port"] = BrokenAfterLLMCall()
@@ -418,3 +419,136 @@ class TestPromptVersions:
         for rec in records:
             assert rec.prompt_versions is not None, "prompt_versions must be a dict"
             assert rec.prompt_versions.get("draft_port") is None
+
+
+# ---------------------------------------------------------------------------
+# prompt_versions dict merged (AAnswerAdapter-style port with dict)
+# ---------------------------------------------------------------------------
+
+class TestPromptVersionsDict:
+    def test_prompt_versions_dict_merged_into_record(self, ports, output_file):
+        """A port with a .prompt_versions dict should have all its keys merged."""
+        class PortWithVersionsDict(MockDraftPort):
+            prompt_versions = {"generate_draft": "v2.1", "self_reflect": "v1.8"}
+
+        ports["draft_port"] = PortWithVersionsDict()
+        runner = ExperimentRunner(**ports, top_k=3)
+        runner.run([make_synthetic_example("e_pvd")], output_file)
+        records = load_records(output_file)
+        for rec in records:
+            pv = rec.prompt_versions
+            assert pv is not None
+            assert pv.get("generate_draft") == "v2.1"
+            assert pv.get("self_reflect") == "v1.8"
+            # Key "draft_port" should NOT appear (dict was merged, not stored under port name)
+            assert "draft_port" not in pv
+
+
+# ---------------------------------------------------------------------------
+# Fatal errors abort the entire run
+# ---------------------------------------------------------------------------
+
+class LLMAuthenticationError(RuntimeError):
+    """Simulates contracts.LLMAuthenticationError by name."""
+
+
+class LLMInsufficientCreditError(RuntimeError):
+    """Simulates contracts.LLMInsufficientCreditError by name."""
+
+
+class TestFatalErrors:
+    def test_llm_auth_error_stops_run(self, ports, output_file):
+        example1 = make_synthetic_example("e_fatal1")
+        example2 = make_synthetic_example("e_fatal2")
+
+        class AuthErrorDraftPort(MockDraftPort):
+            def generate_draft(self, example, llm):
+                raise LLMAuthenticationError("Auth failed")
+
+        ports["draft_port"] = AuthErrorDraftPort()
+        runner = ExperimentRunner(**ports, top_k=3)
+        with pytest.raises(LLMAuthenticationError):
+            runner.run([example1, example2], output_file)
+        # After fatal error, only first example's records written; second not started
+        records = load_records(output_file)
+        example_ids = {r.example_id for r in records}
+        assert "e_fatal1" in example_ids
+        assert "e_fatal2" not in example_ids
+
+    def test_method_fatal_error_stops_run(self, ports, output_file):
+        example1 = make_synthetic_example("e_mfatal1")
+        example2 = make_synthetic_example("e_mfatal2")
+
+        class CreditErrorVerifPort(MockVerificationPort):
+            def verify_draft(self, *args, **kwargs):
+                raise LLMInsufficientCreditError("Insufficient credits")
+
+        ports["verification_port"] = CreditErrorVerifPort()
+        runner = ExperimentRunner(**ports, top_k=3)
+        with pytest.raises(LLMInsufficientCreditError):
+            runner.run([example1, example2], output_file)
+        records = load_records(output_file)
+        example_ids = {r.example_id for r in records}
+        # Second example not processed
+        assert "e_mfatal2" not in example_ids
+
+
+# ---------------------------------------------------------------------------
+# raw_outputs saved on AgentOutputError
+# ---------------------------------------------------------------------------
+
+class TestRawOutputs:
+    def test_raw_outputs_stored_on_error_record(self, ports, output_file):
+        example = make_synthetic_example("e_raw")
+        raw = ["raw output line 1", "raw output line 2"]
+
+        class AgentOutputErrorDraft(MockDraftPort):
+            def self_reflect(self, example, draft, llm):
+                exc = RuntimeError("output error")
+                exc.raw_outputs = raw
+                raise exc
+
+        ports["draft_port"] = AgentOutputErrorDraft()
+        runner = ExperimentRunner(**ports, top_k=3)
+        runner.run([example], output_file)
+        records = {r.method_id: r for r in load_records(output_file)}
+        m2 = records["M2"]
+        assert m2.status == "error"
+        assert m2.raw_outputs == raw
+
+    def test_raw_outputs_none_when_exc_has_no_raw_outputs(self, ports, output_file):
+        example = make_synthetic_example("e_rawno")
+
+        class PlainErrorDraft(MockDraftPort):
+            def self_reflect(self, example, draft, llm):
+                raise RuntimeError("plain error, no raw_outputs")
+
+        ports["draft_port"] = PlainErrorDraft()
+        runner = ExperimentRunner(**ports, top_k=3)
+        runner.run([example], output_file)
+        records = {r.method_id: r for r in load_records(output_file)}
+        assert records["M2"].raw_outputs is None
+
+
+# ---------------------------------------------------------------------------
+# question_type stored in records
+# ---------------------------------------------------------------------------
+
+class TestQuestionType:
+    def test_question_type_stored_in_record(self, ports, output_file):
+        example = make_synthetic_example("e_qt")
+        example.question_type = "yesno"
+        runner = ExperimentRunner(**ports, top_k=3)
+        runner.run([example], output_file)
+        records = load_records(output_file)
+        for rec in records:
+            assert rec.question_type == "yesno"
+
+    def test_question_type_none_when_missing(self, ports, output_file):
+        example = make_synthetic_example("e_qt2")
+        # MockQAInput has question_type="factoid" by default from make_synthetic_example
+        runner = ExperimentRunner(**ports, top_k=3)
+        runner.run([example], output_file)
+        records = load_records(output_file)
+        for rec in records:
+            assert rec.question_type == "factoid"

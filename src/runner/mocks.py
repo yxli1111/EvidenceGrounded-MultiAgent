@@ -94,7 +94,7 @@ class MockLLMUsage:
     input_tokens: int | None = None
     output_tokens: int | None = None
     cost_usd: float | None = None
-    latency_ms: float | None = None
+    latency_seconds: float | None = None  # matches contracts.LLMUsage
     cache_hit: bool | None = None
 
 
@@ -123,6 +123,7 @@ class MockLLMClient:
 
     def generate(
         self,
+        *,
         stage: str,
         messages: list[dict],
         model: str,
@@ -135,7 +136,7 @@ class MockLLMClient:
             "input_tokens": 50,
             "output_tokens": 80,
             "cost_usd": 0.00013,
-            "latency_ms": 120.0,
+            "latency_seconds": 0.12,   # matches contracts.LLMUsage field name
             "cache_hit": False,
         }
         self._usage_log.append(usage_dict)
@@ -145,7 +146,7 @@ class MockLLMClient:
                 input_tokens=50,
                 output_tokens=80,
                 cost_usd=0.00013,
-                latency_ms=120.0,
+                latency_seconds=0.12,
                 cache_hit=False,
             ),
             stage=stage,
@@ -172,7 +173,7 @@ class MockDraftPort:
     def generate_draft(self, example: Any, llm: Any) -> MockAnswerDraft:
         self.generate_draft_call_count += 1
         eid = _attr(example, "example_id")
-        llm.generate("generate_draft", [], _attr(llm, "model", "mock"), 0.0, 512)
+        llm.generate(stage="generate_draft", messages=[], model=_attr(llm, "model", "mock"), temperature=0.0, max_tokens=512)
         return MockAnswerDraft(
             draft_id=f"{eid}:draft",
             short_answer="The mock answer.",
@@ -180,7 +181,7 @@ class MockDraftPort:
         )
 
     def self_reflect(self, example: Any, draft: Any, llm: Any) -> MockRevisionResult:
-        llm.generate("self_reflect", [], _attr(llm, "model", "mock"), 0.0, 512)
+        llm.generate(stage="self_reflect", messages=[], model=_attr(llm, "model", "mock"), temperature=0.0, max_tokens=512)
         return MockRevisionResult(
             draft_id=_attr(draft, "draft_id"),
             feedback_id=f"{_attr(draft, 'draft_id')}:self-reflect",
@@ -192,7 +193,7 @@ class MockDraftPort:
         self, example: Any, draft: Any, llm: Any
     ) -> MockVerificationFeedback:
         did = _attr(draft, "draft_id")
-        llm.generate("independent_critique", [], _attr(llm, "model", "mock"), 0.0, 1024)
+        llm.generate(stage="independent_critique", messages=[], model=_attr(llm, "model", "mock"), temperature=0.0, max_tokens=1024)
         return MockVerificationFeedback(
             feedback_id=f"{did}:critique",
             items=[
@@ -236,7 +237,7 @@ class MockClaimsPort:
 
     def extract_claims(self, draft: Any, llm: Any) -> list[MockAtomicClaim]:
         did = _attr(draft, "draft_id")
-        llm.generate("extract_claims", [], _attr(llm, "model", "mock"), 0.0, 512)
+        llm.generate(stage="extract_claims", messages=[], model=_attr(llm, "model", "mock"), temperature=0.0, max_tokens=512)
         return [
             MockAtomicClaim(
                 claim_id=f"{did}:claim_0",
@@ -262,7 +263,7 @@ class MockVerificationPort:
         llm: Any,
     ) -> MockVerificationFeedback:
         did = _attr(draft, "draft_id")
-        llm.generate("verify_draft", [], _attr(llm, "model", "mock"), 0.0, 1024)
+        llm.generate(stage="verify_draft", messages=[], model=_attr(llm, "model", "mock"), temperature=0.0, max_tokens=1024)
         ev_id = (
             f"{_attr(evidence[0], 'doc_title')}::{_attr(evidence[0], 'sentence_id')}"
             if evidence else ""
@@ -291,7 +292,7 @@ class MockVerificationPort:
         llm: Any,
     ) -> MockVerificationFeedback:
         did = _attr(draft, "draft_id")
-        llm.generate("verify_claims", [], _attr(llm, "model", "mock"), 0.0, 1024)
+        llm.generate(stage="verify_claims", messages=[], model=_attr(llm, "model", "mock"), temperature=0.0, max_tokens=1024)
         items = []
         for claim in claims:
             cid = _attr(claim, "claim_id")
@@ -323,7 +324,7 @@ class MockVerificationPort:
     ) -> MockRevisionResult:
         did = _attr(draft, "draft_id")
         fid = _attr(feedback, "feedback_id")
-        llm.generate("revise_answer", [], _attr(llm, "model", "mock"), 0.0, 512)
+        llm.generate(stage="revise_answer", messages=[], model=_attr(llm, "model", "mock"), temperature=0.0, max_tokens=512)
         return MockRevisionResult(
             draft_id=did,
             feedback_id=fid,

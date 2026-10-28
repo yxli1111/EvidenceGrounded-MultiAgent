@@ -20,6 +20,7 @@ class LLMClient(Protocol):
 
     def generate(
         self,
+        *,
         stage: str,
         messages: list[dict],
         model: str,

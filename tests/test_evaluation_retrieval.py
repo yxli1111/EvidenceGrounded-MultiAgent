@@ -213,3 +213,39 @@ class TestClaimConditionedNotImplemented:
                 records, gold, k=5, method_id="M4",
                 denominator=RecallDenominator.CLAIM_CONDITIONED
             )
+
+
+# ---------------------------------------------------------------------------
+# Tuple gold_supporting_facts (contracts.QAGold format)
+# ---------------------------------------------------------------------------
+
+class TestTupleGoldSupportingFacts:
+    def test_tuple_format_accepted(self):
+        """contracts.QAGold uses list[tuple[str, int]] for gold_supporting_facts."""
+        gold_tuples = [("France", 0), ("Germany", 1)]
+        evidence = make_evidence([("France", 0), ("Germany", 1)])
+        result = recall_at_k(evidence, gold_tuples, k=5)
+        assert result == pytest.approx(1.0)
+
+    def test_tuple_partial_recall(self):
+        gold_tuples = [("France", 0), ("Germany", 1)]
+        evidence = make_evidence([("France", 0)])
+        result = recall_at_k(evidence, gold_tuples, k=5)
+        assert result == pytest.approx(0.5)
+
+    def test_mixed_dict_and_tuple_format(self):
+        """Mixed list: some dicts, some tuples."""
+        gold_mixed = [{"title": "France", "sentence_id": 0}, ("Germany", 1)]
+        evidence = make_evidence([("France", 0), ("Germany", 1)])
+        result = recall_at_k(evidence, gold_mixed, k=5)
+        assert result == pytest.approx(1.0)
+
+    def test_tuple_full_coverage(self):
+        gold_tuples = [("France", 0)]
+        evidence = make_evidence([("France", 0)])
+        assert full_coverage_at_k(evidence, gold_tuples, k=5) is True
+
+    def test_tuple_zero_recall(self):
+        gold_tuples = [("France", 0)]
+        evidence = make_evidence([("Germany", 1)])
+        assert recall_at_k(evidence, gold_tuples, k=5) == pytest.approx(0.0)

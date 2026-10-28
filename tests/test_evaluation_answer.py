@@ -244,3 +244,83 @@ class TestComputeEmF1Batch:
         result = compute_em_f1_batch(records, gold)
         assert result["M1"]["em"] == pytest.approx(0.0)
         assert result["M1"]["n_error"] == 1
+
+
+# ---------------------------------------------------------------------------
+# export_per_example_csv
+# ---------------------------------------------------------------------------
+
+class TestExportPerExampleCsv:
+    def _make_record(self, eid, mid, status, pred, short, qt=None):
+        return {
+            "example_id": eid,
+            "method_id": mid,
+            "status": status,
+            "final_answer": pred,
+            "short_answer": short,
+            "question_type": qt,
+        }
+
+    def test_csv_file_created(self, tmp_path):
+        from src.evaluation.answer_metrics import export_per_example_csv
+        out = str(tmp_path / "out.csv")
+        records = [self._make_record("e1", "M1", "ok", "Paris", "Paris", "factoid")]
+        gold = {"e1": {"gold_answer": "Paris"}}
+        path = export_per_example_csv(records, gold, output_path=out)
+        import os
+        assert os.path.exists(path)
+
+    def test_csv_columns_correct(self, tmp_path):
+        from src.evaluation.answer_metrics import export_per_example_csv
+        import csv
+        out = str(tmp_path / "cols.csv")
+        records = [self._make_record("e1", "M1", "ok", "Paris", "Paris")]
+        gold = {"e1": {"gold_answer": "Paris"}}
+        export_per_example_csv(records, gold, output_path=out)
+        with open(out, newline="", encoding="utf-8") as f:
+            header = next(csv.reader(f))
+        assert header == ["example_id", "method_id", "status", "em", "f1",
+                          "draft_em", "question_type"]
+
+    def test_em_f1_values_correct(self, tmp_path):
+        from src.evaluation.answer_metrics import export_per_example_csv
+        import csv
+        out = str(tmp_path / "vals.csv")
+        records = [self._make_record("e1", "M1", "ok", "Paris", "London")]
+        gold = {"e1": {"gold_answer": "Paris"}}
+        export_per_example_csv(records, gold, output_path=out)
+        with open(out, newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+        assert len(rows) == 1
+        assert float(rows[0]["em"]) == pytest.approx(1.0)
+        assert float(rows[0]["draft_em"]) == pytest.approx(0.0)  # London != Paris
+
+    def test_error_status_gives_zero_scores(self, tmp_path):
+        from src.evaluation.answer_metrics import export_per_example_csv
+        import csv
+        out = str(tmp_path / "err.csv")
+        records = [self._make_record("e1", "M1", "error", None, None)]
+        gold = {"e1": {"gold_answer": "Paris"}}
+        export_per_example_csv(records, gold, output_path=out)
+        with open(out, newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+        assert float(rows[0]["em"]) == pytest.approx(0.0)
+        assert float(rows[0]["f1"]) == pytest.approx(0.0)
+
+    def test_question_type_in_output(self, tmp_path):
+        from src.evaluation.answer_metrics import export_per_example_csv
+        import csv
+        out = str(tmp_path / "qt.csv")
+        records = [self._make_record("e1", "M1", "ok", "yes", "yes", "yesno")]
+        gold = {"e1": {"gold_answer": "yes"}}
+        export_per_example_csv(records, gold, output_path=out)
+        with open(out, newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+        assert rows[0]["question_type"] == "yesno"
+
+    def test_parent_dirs_created(self, tmp_path):
+        from src.evaluation.answer_metrics import export_per_example_csv
+        out = str(tmp_path / "deep" / "nested" / "out.csv")
+        export_per_example_csv([], {}, output_path=out)
+        import os
+        assert os.path.exists(out)

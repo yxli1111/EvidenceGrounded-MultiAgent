@@ -43,6 +43,13 @@ from .records import (
 
 _METHOD_IDS = ["M1", "M2", "M3", "M4", "M5"]
 
+# Errors that should abort the entire run (not just one example)
+_FATAL_ERROR_TYPES: frozenset[str] = frozenset({
+    "LLMAuthenticationError",
+    "LLMInsufficientCreditError",
+    "ConfigurationError",
+})
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -52,6 +59,22 @@ def _attr(obj: Any, name: str, default: Any = None) -> Any:
     if isinstance(obj, dict):
         return obj.get(name, default)
     return getattr(obj, name, default)
+
+
+def _collect_prompt_versions(ports: list[tuple[str, Any]]) -> dict:
+    """Merge prompt_versions from all ports into one dict.
+
+    If a port has a .prompt_versions dict, all its entries are merged in.
+    If it only has .prompt_version (str), it is stored under the port name.
+    """
+    result: dict = {}
+    for port_name, port in ports:
+        pv = getattr(port, "prompt_versions", None)
+        if isinstance(pv, dict):
+            result.update(pv)
+        else:
+            result[port_name] = getattr(port, "prompt_version", None)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -195,16 +218,17 @@ class ExperimentRunner:
         draft_cache = load_draft_cache(dpath)
         new_records: list[ExperimentRecord] = []
 
-        prompt_versions = {
-            "draft_port": getattr(self.draft_port, "prompt_version", None),
-            "retrieve_port": getattr(self.retrieve_port, "prompt_version", None),
-            "claims_port": getattr(self.claims_port, "prompt_version", None),
-            "verification_port": getattr(self.verification_port, "prompt_version", None),
-        }
+        prompt_versions = _collect_prompt_versions([
+            ("draft_port", self.draft_port),
+            ("retrieve_port", self.retrieve_port),
+            ("claims_port", self.claims_port),
+            ("verification_port", self.verification_port),
+        ])
 
         for example in examples:
             eid = _attr(example, "example_id")
             question = _attr(example, "question", "")
+            question_type = _attr(example, "question_type")
 
             # Skip the whole example if all 5 methods are already complete.
             if all((eid, mid) in completed for mid in _METHOD_IDS):
@@ -225,14 +249,19 @@ class ExperimentRunner:
                     draft_usage = self._drain_usage()
                 except Exception as exc:
                     draft_usage = self._drain_usage()
+                    is_fatal = type(exc).__name__ in _FATAL_ERROR_TYPES
                     for mid in _METHOD_IDS:
                         if (eid, mid) in completed:
                             continue
                         rec = make_error_record(eid, mid, str(exc), question, model_settings)
                         rec.draft_usage = draft_usage
                         rec.prompt_versions = prompt_versions
+                        rec.question_type = question_type
+                        rec.raw_outputs = list(getattr(exc, "raw_outputs", None) or []) or None
                         append_record(output_path, rec)
                         new_records.append(rec)
+                    if is_fatal:
+                        raise
                     continue
 
                 dd = _ser_draft(draft)
@@ -253,9 +282,19 @@ class ExperimentRunner:
                     partial_usage = self._drain_usage()
                     rec = make_error_record(eid, mid, str(exc), question, model_settings)
                     rec.usage = partial_usage
+                    rec.raw_outputs = list(getattr(exc, "raw_outputs", None) or []) or None
+                    rec.draft_usage = list(draft_usage)
+                    rec.prompt_versions = prompt_versions
+                    rec.question_type = question_type
+                    append_record(output_path, rec)
+                    new_records.append(rec)
+                    if type(exc).__name__ in _FATAL_ERROR_TYPES:
+                        raise
+                    continue
 
                 rec.draft_usage = list(draft_usage)
                 rec.prompt_versions = prompt_versions
+                rec.question_type = question_type
                 append_record(output_path, rec)
                 new_records.append(rec)
 
@@ -288,7 +327,11 @@ class ExperimentRunner:
     def _run_m2(
         self, example: Any, draft: Any, model_settings: dict | None
     ) -> ExperimentRecord:
-        revision = self.draft_port.self_reflect(example, draft, self.llm)
+        run_m2_fn = getattr(self.draft_port, "run_m2", None)
+        if callable(run_m2_fn):
+            revision = run_m2_fn(example, draft, self.llm)
+        else:
+            revision = self.draft_port.self_reflect(example, draft, self.llm)
         usage = self._drain_usage()
         dd = _ser_draft(draft)
         rd = _ser_revision(revision)

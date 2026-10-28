@@ -124,21 +124,21 @@ from outside; the split source is injected at call time.
 
 ---
 
-## GAP-4: `LLMResponse` and `LLMUsage` schema (C)
+## GAP-4: `LLMResponse` and `LLMUsage` schema (C) — CONFIRMED
 
-**Status:** Needed for P3 cost tracking.
+**Status:** Resolved from `feat/contracts-v0.1`.
 
-`PROJECT_CONTRACT.md` Section 2 describes usage fields but gives no Python class.
-
-**Proposed schema (C to confirm or revise):**
+C's actual schema (confirmed from contracts branch):
 
 ```python
 @dataclass
 class LLMUsage:
+    stage: str
+    model: str
     input_tokens: int | None
     output_tokens: int | None
     cost_usd: float | None
-    latency_ms: float | None
+    latency_seconds: float | None   # ← seconds, not milliseconds
     cache_hit: bool | None
 
 @dataclass
@@ -149,8 +149,38 @@ class LLMResponse:
     model: str
 ```
 
+**Key difference from E's original proposal:** `latency_seconds` (not `latency_ms`).
+E's `UsageWrapper` converts `latency_seconds → latency_ms` internally.
+E's `cost_metrics._accumulate()` accepts both `latency_ms` and `latency_seconds`
+(with `latency_seconds * 1000` fallback).
+E's `ExperimentRecord.usage` entries now carry `latency_seconds` (matching C).
+
 `usage` fields use `None` (not zero) when the provider does not report them.
 Cache replay must not be counted as new paid usage.
+
+---
+
+## ExperimentRecord schema divergence — E's flat record vs contracts AnswerAgent output
+
+E's `ExperimentRecord` is a flat JSONL-serialisable dict optimised for offline
+metric computation.  `contracts.ExperimentRecord` (if defined) may use nested
+dataclass objects.  **E's flat format is deliberately kept separate.**
+
+| Field | E's ExperimentRecord | contracts / other branches |
+|-------|---------------------|---------------------------|
+| `question` | `str` (snapshot for debugging) | not in contracts |
+| `draft_id` | `str \| None` | part of `AnswerDraft` |
+| `claims` | `list[dict]` (serialised) | `list[AtomicClaim]` objects |
+| `evidence` | `list[dict]` (serialised) | `list[Evidence]` objects |
+| `feedback` | `dict` (serialised) | `VerificationFeedback` object |
+| `usage` | `list[dict]` with `latency_seconds` | `list[LLMUsage]` objects |
+| `question_type` | `str \| None` (P8 addition) | in `QAInput.question_type` |
+| `raw_outputs` | `list[str] \| None` (P8 addition) | `AgentOutputError.raw_outputs` |
+
+**Rationale for keeping E's format:** `json.dumps(dataclasses.asdict(rec))`
+round-trips cleanly; nested dataclasses would require custom encoders.
+Metric functions (`compute_em_f1_batch`, `mean_recall_at_k`, `aggregate_usage_by_method`)
+operate on plain dicts — no imports of A/B/C/D packages needed at evaluation time.
 
 ---
 

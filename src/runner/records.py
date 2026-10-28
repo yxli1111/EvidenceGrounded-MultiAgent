@@ -66,6 +66,10 @@ class ExperimentRecord:
     # Error details (populated when status="error")
     error: str | None = None
 
+    # Optional fields added for contracts alignment
+    question_type: str | None = None        # "factoid" | "yesno" | etc.
+    raw_outputs: list[str] | None = None    # raw LLM responses on AgentOutputError
+
 
 # ---------------------------------------------------------------------------
 # Serialisation helpers

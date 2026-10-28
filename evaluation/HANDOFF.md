@@ -8,18 +8,22 @@
 
 | Path | Description |
 |------|-------------|
-| `src/evaluation/answer_metrics.py` | EM / token-F1 (HotpotQA normalization) |
-| `src/evaluation/retrieval_metrics.py` | Recall@k with question- / claim-conditioned denominator |
-| `src/evaluation/cost_metrics.py` | LLM usage aggregation, budget estimation |
+| `src/evaluation/answer_metrics.py` | EM / token-F1 (HotpotQA normalization); `export_per_example_csv` |
+| `src/evaluation/retrieval_metrics.py` | Recall@k; accepts both dict and tuple gold_supporting_facts |
+| `src/evaluation/cost_metrics.py` | LLM usage aggregation, budget estimation; `latency_seconds` fallback |
 | `src/evaluation/statistical.py` | Paired bootstrap confidence intervals |
-| `src/runner/protocols.py` | `typing.Protocol` interfaces for A/B/C/D ports |
-| `src/runner/records.py` | `ExperimentRecord` dataclass + JSONL serialization |
-| `src/runner/runner.py` | `ExperimentRunner` orchestrating M1–M5 |
-| `src/runner/mocks.py` | Drop-in mocks for offline testing |
+| `src/runner/protocols.py` | `typing.Protocol` interfaces; LLMClient.generate is keyword-only |
+| `src/runner/records.py` | `ExperimentRecord` dataclass + JSONL; adds `question_type`, `raw_outputs` |
+| `src/runner/runner.py` | `ExperimentRunner` orchestrating M1–M5; fatal-error abort; `run_m2` support |
+| `src/runner/mocks.py` | Drop-in mocks; keyword-only generate; `latency_seconds` usage entries |
+| `src/runner/usage_wrapper.py` | Wraps LLMClient; converts `latency_seconds → latency_ms` |
+| `src/runner/adapters.py` | BRetrievalAdapter, DVerificationAdapter, AAnswerAdapter, data helpers |
 | `configs/model_pricing.json` | Unit prices (USD/1k tokens) per model |
 | `research/E_tradeoff.ipynb` | RQ3 end-to-end analysis notebook |
-| `tests/test_evaluation_*.py` | 76 unit tests for evaluation modules |
-| `tests/test_runner_e2e.py` | 28 end-to-end runner tests |
+| `tests/test_evaluation_*.py` | Unit tests for evaluation modules |
+| `tests/test_runner_e2e.py` | End-to-end runner tests including fatal errors, raw_outputs, question_type |
+| `tests/test_runner_usage_wrapper.py` | 13 tests for UsageWrapper |
+| `tests/test_runner_adapters.py` | 14 adapter tests (skipped when contracts not installed) |
 
 ---
 
@@ -62,6 +66,20 @@ records = runner.run(
 
 The runner writes one JSONL line per `(example_id, method_id)` pair.  If the
 output file already exists, completed pairs are skipped (idempotent resume).
+
+---
+
+## UsageWrapper limitations
+
+`src/runner/usage_wrapper.py` bridges C's `LLMClient` interface to E's cost
+metrics.  Key constraints:
+
+| Behaviour | Detail |
+|-----------|--------|
+| `latency_seconds → latency_ms` | Only applies when `drain_usage` is **not** available on the inner client.  When the inner client has `drain_usage`, the wrapper delegates to it entirely and its own conversion is discarded. |
+| Inner `drain_usage` takes priority | The wrapper's own converted log is cleared and inner's records are returned.  If inner `drain_usage` returns entries with `latency_seconds`, `cost_metrics._accumulate()` will convert them via the `latency_seconds` fallback. |
+| Error entries | If `inner.generate()` raises, an error entry `{"stage", "model", "status": "error", "error_type"}` is appended to the wrapper log.  These entries contain no token or cost data. |
+| No retries | The wrapper re-raises all exceptions immediately; retry logic belongs in the caller. |
 
 ---
 
