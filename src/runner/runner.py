@@ -110,6 +110,40 @@ def _make_draft_obj(d: dict) -> Any:
     )
 
 
+def _coerce_example(example: Any) -> Any:
+    """Convert a dict example to contracts.schemas.QAInput if available, else return as-is.
+
+    When the contracts package is not on sys.path the dict passes through
+    unchanged; _attr() handles both dicts and objects throughout the runner.
+    """
+    if not isinstance(example, dict):
+        return example
+    try:
+        from contracts.schemas import QAInput, Sentence
+    except ImportError:
+        return example
+    ctx_raw = example.get("context") or []
+    sentences = []
+    for s in ctx_raw:
+        if isinstance(s, dict):
+            sentences.append(Sentence(
+                title=s.get("title", ""),
+                sentence_id=s.get("sentence_id", 0),
+                text=s.get("text", ""),
+            ))
+        else:
+            sentences.append(s)
+    kwargs: dict = {
+        "example_id": example.get("example_id", ""),
+        "question": example.get("question", ""),
+        "context": sentences,
+    }
+    qt = example.get("question_type")
+    if qt is not None:
+        kwargs["question_type"] = qt
+    return QAInput(**kwargs)
+
+
 def _m5_allocations(
     n_claims: int, top_k_per_claim: int, budget: int | None
 ) -> list[int]:
@@ -146,7 +180,7 @@ class ExperimentRunner:
         m5_total_evidence_budget: total evidence slots across all M5 claims;
             distributed round-robin.  None = no limit.
         query_include_question: if True, prepend question + "\\n" to M4/M5 queries.
-            Default False (explanation / claim_text only).
+            Default True (matches CLI default).
     """
 
     def __init__(
@@ -160,7 +194,7 @@ class ExperimentRunner:
         m4_top_k: int | None = None,
         m5_top_k_per_claim: int | None = None,
         m5_total_evidence_budget: int | None = None,
-        query_include_question: bool = False,
+        query_include_question: bool = True,
     ) -> None:
         self.draft_port = draft_port
         self.retrieve_port = retrieve_port
@@ -274,6 +308,7 @@ class ExperimentRunner:
         ])
 
         for example in examples:
+            example = _coerce_example(example)
             eid = _attr(example, "example_id")
             question = _attr(example, "question", "")
             question_type = _attr(example, "question_type")
@@ -296,6 +331,8 @@ class ExperimentRunner:
             else:
                 try:
                     draft = self.draft_port.generate_draft(example, effective_llm)
+                    if isinstance(draft, dict):
+                        draft = _make_draft_obj(draft)
                     draft_usage = self._drain_usage(effective_llm)
                 except Exception as exc:
                     draft_usage = self._drain_usage(effective_llm)

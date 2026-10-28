@@ -72,6 +72,8 @@ def _build_parser() -> argparse.ArgumentParser:
                         "before running (avoids re-generating drafts).")
     p.add_argument("--methods", default=None,
                    help="Comma-separated method IDs to run, e.g. M3,M4,M5 (default: all).")
+    p.add_argument("--split", default="eval", choices=["eval", "dev"],
+                   help="'eval' (default): exclude B_dev_50 IDs; 'dev': run only B_dev_50 IDs.")
     return p
 
 
@@ -96,6 +98,8 @@ def main() -> None:
     print(f"[run_experiment] output : {out_dir}")
     print(f"[run_experiment] model  : {args.model}")
     print(f"[run_experiment] dry_run: {args.dry_run}")
+    if not args.report_only:
+        print(f"[run_experiment] split  : {args.split}")
     if methods_list:
         print(f"[run_experiment] methods: {','.join(methods_list)}")
     if not args.report_only:
@@ -109,6 +113,8 @@ def main() -> None:
             sys.exit(1)
         gold_lookup = _load_gold_lookup(out_dir)
         n_dev_excluded = _load_meta_field(out_dir, "n_dev_excluded", 0)
+        # Use the stored split so CSV metadata stays consistent with the original run
+        args.split = _load_meta_field(out_dir, "split", "eval")
         _write_outputs(out_dir, gold_lookup, args, n_dev_excluded)
         return
 
@@ -241,13 +247,26 @@ def _run_real(args, records_path, out_dir: pathlib.Path, methods_list):
 
     # --- Dev/eval split ---
     dev_ids = load_id_manifest("research/B_dev_50_ids.json")
-    load_limit = len(dev_ids) + args.n + 20  # overshoot to guarantee enough after filter
-    print(f"Loading up to {load_limit} HotpotQA validation examples...")
-    all_examples, gold_lookup_raw = load_hotpotqa_contract("validation", limit=load_limit)
-    eval_examples, n_removed = filter_out_ids(all_examples, dev_ids)
-    eval_examples = eval_examples[: args.n]
-    assert_disjoint(dev_ids, {ex.example_id for ex in eval_examples})
-    print(f"Eval set: {len(eval_examples)} examples ({n_removed} dev examples excluded)")
+
+    if args.split == "dev":
+        load_limit = len(dev_ids) + 10
+        print(f"Loading up to {load_limit} HotpotQA validation examples (dev split)...")
+        all_examples, gold_lookup_raw = load_hotpotqa_contract("validation", limit=load_limit)
+        dev_id_set = set(dev_ids)
+        examples_to_run = [ex for ex in all_examples
+                           if getattr(ex, "example_id", None) in dev_id_set
+                           or (isinstance(ex, dict) and ex.get("example_id") in dev_id_set)]
+        examples_to_run = examples_to_run[: args.n]
+        n_removed = 0
+        print(f"Dev set: {len(examples_to_run)} examples")
+    else:
+        load_limit = len(dev_ids) + args.n + 20  # overshoot to guarantee enough after filter
+        print(f"Loading up to {load_limit} HotpotQA validation examples (eval split)...")
+        all_examples, gold_lookup_raw = load_hotpotqa_contract("validation", limit=load_limit)
+        examples_to_run, n_removed = filter_out_ids(all_examples, dev_ids)
+        examples_to_run = examples_to_run[: args.n]
+        assert_disjoint(dev_ids, {ex.example_id for ex in examples_to_run})
+        print(f"Eval set: {len(examples_to_run)} examples ({n_removed} dev examples excluded)")
 
     # Normalise QAGold objects to plain dicts
     gold_lookup = {}
@@ -278,7 +297,7 @@ def _run_real(args, records_path, out_dir: pathlib.Path, methods_list):
 
     # --- LLM with budget guard ---
     budget_guard = BudgetGuard(BudgetConfig(
-        max_calls=len(eval_examples) * 5 * 6,
+        max_calls=len(examples_to_run) * 5 * 6,
         max_cost_usd=args.max_cost_usd,
         min_key_remaining_usd=0.0,
     ))
@@ -312,9 +331,9 @@ def _run_real(args, records_path, out_dir: pathlib.Path, methods_list):
         query_include_question=args.query_include_question,
     )
 
-    progress_fn = _make_progress_fn(len(eval_examples))
+    progress_fn = _make_progress_fn(len(examples_to_run))
     runner.run(
-        eval_examples,
+        examples_to_run,
         records_path,
         model_settings={"model": args.model, "temperature": 0.0},
         retry_errors=args.retry_errors,
@@ -365,6 +384,8 @@ def _write_outputs(out_dir: pathlib.Path, gold_lookup, args, n_dev_excluded: int
     from src.evaluation.answer_metrics import exact_match, token_f1, export_per_example_csv
     from src.evaluation.cost_metrics import aggregate_usage_by_method, aggregate_draft_usage, estimate_budget
 
+    split_label = getattr(args, "split", "eval") or "eval"
+
     # Load ALL records from file so retry history is included
     all_records = load_records(str(out_dir / "records.jsonl"))
     latest = latest_records(all_records)
@@ -378,29 +399,39 @@ def _write_outputs(out_dir: pathlib.Path, gold_lookup, args, n_dev_excluded: int
     cost_stats = aggregate_usage_by_method(all_records)
 
     print("=== Per-method results ===")
-    print(f"{'Method':<6} {'N':>4} {'OK':>4}  {'EM':>6}  {'F1':>6}  "
+    print(f"{'Method':<6} {'N':>4} {'OK':>4}  {'EM':>6}  {'EM_ok':>6}  {'F1':>6}  "
           f"{'Calls':>5}  {'Cost($)':>9}  {'Waste($)':>9}")
-    print("-" * 65)
+    print("-" * 72)
 
     cost_summary: dict = {}
     for mid in ["M1", "M2", "M3", "M4", "M5"]:
         recs = by_method.get(mid, [])
         n_ok = sum(1 for r in recs if r.status == "ok")
+        n_total = len(recs)
 
-        em_vals, f1_vals = [], []
+        # EM/F1: denominator = all N (failures contribute 0)
+        # EM_ok: denominator = n_ok only (success-only average)
+        em_all, f1_all, em_ok_vals = [], [], []
         for r in recs:
             if r.status != "ok":
+                em_all.append(0.0)
+                f1_all.append(0.0)
                 continue
             pred = ((r.final or {}).get("final_answer")
                     or (r.draft or {}).get("short_answer")
                     or "")
             gold = gold_lookup.get(r.example_id, {})
-            gold_ans = gold.get("gold_answer", "") if isinstance(gold, dict) else getattr(gold, "gold_answer", "")
-            em_vals.append(exact_match(pred, gold_ans))
-            f1_vals.append(token_f1(pred, gold_ans))
+            gold_ans = (gold.get("gold_answer", "") if isinstance(gold, dict)
+                        else getattr(gold, "gold_answer", ""))
+            ev = exact_match(pred, gold_ans)
+            fv = token_f1(pred, gold_ans)
+            em_all.append(ev)
+            f1_all.append(fv)
+            em_ok_vals.append(ev)
 
-        em = sum(em_vals) / len(em_vals) if em_vals else float("nan")
-        f1 = sum(f1_vals) / len(f1_vals) if f1_vals else float("nan")
+        em = sum(em_all) / n_total if n_total > 0 else float("nan")
+        f1 = sum(f1_all) / n_total if n_total > 0 else float("nan")
+        em_ok = sum(em_ok_vals) / len(em_ok_vals) if em_ok_vals else float("nan")
 
         cs = cost_stats.get(mid, {})
         n_calls = cs.get("llm_calls", 0)
@@ -408,10 +439,11 @@ def _write_outputs(out_dir: pathlib.Path, gold_lookup, args, n_dev_excluded: int
         waste = cs.get("retry_waste_cost_usd")
         cost_summary[mid] = cs
 
-        em_s = f"{em:.3f}" if em == em else "  n/a"
-        f1_s = f"{f1:.3f}" if f1 == f1 else "  n/a"
+        em_s    = f"{em:.3f}"    if em    == em    else "  n/a"
+        em_ok_s = f"{em_ok:.3f}" if em_ok == em_ok else "  n/a"
+        f1_s    = f"{f1:.3f}"    if f1    == f1    else "  n/a"
         waste_s = f"{waste:.4f}" if waste is not None else "     n/a"
-        print(f"{mid:<6} {len(recs):>4} {n_ok:>4}  {em_s:>6}  {f1_s:>6}  "
+        print(f"{mid:<6} {n_total:>4} {n_ok:>4}  {em_s:>6}  {em_ok_s:>6}  {f1_s:>6}  "
               f"{n_calls:>5}  {cost:>9.4f}  {waste_s:>9}")
 
     method_total = sum(
@@ -462,6 +494,7 @@ def _write_outputs(out_dir: pathlib.Path, gold_lookup, args, n_dev_excluded: int
     csv_path = str(out_dir / "per_example.csv")
     run_meta: dict = {
         "model": args.model,
+        "split": split_label,
         "query_include_question": args.query_include_question,
         "m4_top_k": 5,
         "m5_top_k_per_claim": 5,
@@ -474,7 +507,7 @@ def _write_outputs(out_dir: pathlib.Path, gold_lookup, args, n_dev_excluded: int
         run_meta["methods"] = args.methods
     export_per_example_csv(
         latest, gold_lookup, csv_path,
-        preliminary=True, split="validation",
+        preliminary=True, split=split_label,
         extra_meta=run_meta,
     )
 

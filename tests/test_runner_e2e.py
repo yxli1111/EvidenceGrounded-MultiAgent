@@ -758,3 +758,110 @@ class TestProgressCallback:
         calls = []
         runner.run([example], output_file, progress_fn=lambda *a: calls.append(a))
         assert len(calls) == 1, "progress_fn must be called even when draft fails"
+
+
+# ---------------------------------------------------------------------------
+# Issue P16-2a: dict examples are accepted and processed correctly
+# ---------------------------------------------------------------------------
+
+class TestDictExampleInput:
+    def test_dict_example_produces_five_ok_records(self, ports, output_file):
+        """Runner accepts a plain-dict example and processes all 5 methods."""
+        example = {
+            "example_id": "e_dict_ex",
+            "question": "What is the capital of France?",
+            "context": [
+                {"title": "France", "sentence_id": 0, "text": "Paris is the capital of France."},
+                {"title": "France", "sentence_id": 1, "text": "France is in Western Europe."},
+            ],
+            "question_type": "factoid",
+        }
+        runner = ExperimentRunner(**ports, top_k=3)
+        records = runner.run([example], output_file)
+        assert len(records) == 5
+        for rec in records:
+            assert rec.status == "ok", f"{rec.method_id}: {rec.error}"
+            assert rec.example_id == "e_dict_ex"
+            assert rec.question == "What is the capital of France?"
+
+    def test_dict_example_question_type_stored(self, ports, output_file):
+        """question_type from a dict example is preserved on all records."""
+        example = {
+            "example_id": "e_dict_qt",
+            "question": "Is Paris in France?",
+            "context": [
+                {"title": "France", "sentence_id": 0, "text": "Paris is the capital of France."},
+            ],
+            "question_type": "yesno",
+        }
+        runner = ExperimentRunner(**ports, top_k=3)
+        records = runner.run([example], output_file)
+        for rec in records:
+            assert rec.question_type == "yesno"
+
+    def test_mixed_dict_and_object_examples(self, ports, output_file):
+        """A batch mixing dict and object examples all produce ok records."""
+        dict_ex = {
+            "example_id": "e_mix_dict",
+            "question": "Q1?",
+            "context": [{"title": "T", "sentence_id": 0, "text": "Some text."}],
+        }
+        obj_ex = make_synthetic_example("e_mix_obj", "Q2?")
+        runner = ExperimentRunner(**ports, top_k=3)
+        records = runner.run([dict_ex, obj_ex], output_file)
+        assert len(records) == 10
+        assert all(r.status == "ok" for r in records)
+        eids = {r.example_id for r in records}
+        assert eids == {"e_mix_dict", "e_mix_obj"}
+
+
+# ---------------------------------------------------------------------------
+# Issue P16-2b: draft_port returning a dict is auto-coerced via _make_draft_obj
+# ---------------------------------------------------------------------------
+
+class TestDictDraftCoercion:
+    def test_dict_draft_from_port_produces_ok_records(self, ports, output_file):
+        """A port that returns a dict draft is coerced and all methods succeed."""
+        class DictDraftPort(MockDraftPort):
+            def generate_draft(self, example, llm):
+                llm.generate(
+                    stage="generate_draft", messages=[],
+                    model=getattr(llm, "model", "mock"),
+                    temperature=0.0, max_tokens=512,
+                )
+                eid = getattr(example, "example_id", None) or example.get("example_id", "x")
+                return {
+                    "draft_id": f"{eid}:dict_draft",
+                    "short_answer": "dict short answer",
+                    "explanation": "dict explanation text",
+                }
+
+        ports["draft_port"] = DictDraftPort()
+        runner = ExperimentRunner(**ports, top_k=3)
+        records = runner.run([make_synthetic_example("e_dict_draft")], output_file)
+        assert len(records) == 5
+        for rec in records:
+            assert rec.status == "ok", f"{rec.method_id}: {rec.error}"
+
+    def test_dict_draft_short_answer_preserved_in_record(self, ports, output_file):
+        """The short_answer from a dict draft is stored in rec.draft."""
+        class DictDraftPort(MockDraftPort):
+            def generate_draft(self, example, llm):
+                llm.generate(
+                    stage="generate_draft", messages=[],
+                    model=getattr(llm, "model", "mock"),
+                    temperature=0.0, max_tokens=512,
+                )
+                return {
+                    "draft_id": "dd:001",
+                    "short_answer": "preserved answer",
+                    "explanation": "preserved explanation",
+                }
+
+        ports["draft_port"] = DictDraftPort()
+        runner = ExperimentRunner(**ports, top_k=3)
+        records = runner.run([make_synthetic_example("e_dd_preserve")], output_file)
+        for rec in records:
+            assert rec.draft is not None
+            assert rec.draft.get("short_answer") == "preserved answer"
+            assert rec.draft.get("draft_id") == "dd:001"
