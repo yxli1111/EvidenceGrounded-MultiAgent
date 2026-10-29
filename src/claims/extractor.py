@@ -3,6 +3,7 @@ from pathlib import Path
 
 from contracts.interfaces import LLMClient
 from contracts.schemas import AnswerDraft, AtomicClaim
+from src.core.budget import BudgetExceededError
 from src.core.llm_client import LLMClientError
 
 
@@ -139,6 +140,9 @@ class AtomicClaimExtractor:
             # Preserve the original LLMClient error type.
             raise
 
+        except BudgetExceededError:
+            raise
+
         except Exception as exc:
             raise ClaimExtractionError(
                 "Unexpected LLM extraction failure"
@@ -253,7 +257,7 @@ class AtomicClaimExtractor:
                     short_answer=draft.short_answer,
                 )
 
-            except LLMClientError:
+            except (LLMClientError, BudgetExceededError):
                 # Repair API failures must propagate unchanged.
                 raise
 
