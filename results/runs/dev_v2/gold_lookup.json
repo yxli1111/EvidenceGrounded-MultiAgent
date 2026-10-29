@@ -1,0 +1,890 @@
+{
+  "5a8b57f25542995d1e6f1371": {
+    "gold_answer": "yes",
+    "gold_supporting_facts": [
+      {
+        "title": "Scott Derrickson",
+        "sentence_id": 0
+      },
+      {
+        "title": "Ed Wood",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a8c7595554299585d9e36b6": {
+    "gold_answer": "Chief of Protocol",
+    "gold_supporting_facts": [
+      {
+        "title": "Kiss and Tell (1945 film)",
+        "sentence_id": 0
+      },
+      {
+        "title": "Shirley Temple",
+        "sentence_id": 0
+      },
+      {
+        "title": "Shirley Temple",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5a85ea095542994775f606a8": {
+    "gold_answer": "Animorphs",
+    "gold_supporting_facts": [
+      {
+        "title": "The Hork-Bajir Chronicles",
+        "sentence_id": 0
+      },
+      {
+        "title": "The Hork-Bajir Chronicles",
+        "sentence_id": 1
+      },
+      {
+        "title": "The Hork-Bajir Chronicles",
+        "sentence_id": 2
+      },
+      {
+        "title": "Animorphs",
+        "sentence_id": 0
+      },
+      {
+        "title": "Animorphs",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5adbf0a255429947ff17385a": {
+    "gold_answer": "no",
+    "gold_supporting_facts": [
+      {
+        "title": "Laleli Mosque",
+        "sentence_id": 0
+      },
+      {
+        "title": "Esma Sultan Mansion",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a8e3ea95542995a26add48d": {
+    "gold_answer": "Greenwich Village, New York City",
+    "gold_supporting_facts": [
+      {
+        "title": "Big Stone Gap (film)",
+        "sentence_id": 0
+      },
+      {
+        "title": "Adriana Trigiani",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5abd94525542992ac4f382d2": {
+    "gold_answer": "YG Entertainment",
+    "gold_supporting_facts": [
+      {
+        "title": "2014 S/S",
+        "sentence_id": 0
+      },
+      {
+        "title": "Winner (band)",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a85b2d95542997b5ce40028": {
+    "gold_answer": "Eenasul Fateh",
+    "gold_supporting_facts": [
+      {
+        "title": "Eenasul Fateh",
+        "sentence_id": 0
+      },
+      {
+        "title": "Management consulting",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a87ab905542996e4f3088c1": {
+    "gold_answer": "3,677 seated",
+    "gold_supporting_facts": [
+      {
+        "title": "Lewiston Maineiacs",
+        "sentence_id": 1
+      },
+      {
+        "title": "Androscoggin Bank Colisée",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a7bbb64554299042af8f7cc": {
+    "gold_answer": "Terry Richardson",
+    "gold_supporting_facts": [
+      {
+        "title": "Annie Morton",
+        "sentence_id": 0
+      },
+      {
+        "title": "Annie Morton",
+        "sentence_id": 2
+      },
+      {
+        "title": "Terry Richardson",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a8db19d5542994ba4e3dd00": {
+    "gold_answer": "yes",
+    "gold_supporting_facts": [
+      {
+        "title": "Local H",
+        "sentence_id": 0
+      },
+      {
+        "title": "For Against",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a7166395542994082a3e814": {
+    "gold_answer": "Kansas Song",
+    "gold_supporting_facts": [
+      {
+        "title": "Kansas Song",
+        "sentence_id": 0
+      },
+      {
+        "title": "University of Kansas",
+        "sentence_id": 1
+      },
+      {
+        "title": "University of Kansas",
+        "sentence_id": 2
+      }
+    ]
+  },
+  "5a877e5d5542993e715abf7d": {
+    "gold_answer": "David Weissman",
+    "gold_supporting_facts": [
+      {
+        "title": "David Weissman",
+        "sentence_id": 0
+      },
+      {
+        "title": "David Weissman",
+        "sentence_id": 1
+      },
+      {
+        "title": "The Family Man",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5ab3b0bf5542992ade7c6e39": {
+    "gold_answer": "1999",
+    "gold_supporting_facts": [
+      {
+        "title": "Oh My God (Guns N' Roses song)",
+        "sentence_id": 0
+      },
+      {
+        "title": "Oh My God (Guns N' Roses song)",
+        "sentence_id": 1
+      },
+      {
+        "title": "End of Days (film)",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5ab56e32554299637185c594": {
+    "gold_answer": "no",
+    "gold_supporting_facts": [
+      {
+        "title": "Random House Tower",
+        "sentence_id": 0
+      },
+      {
+        "title": "888 7th Avenue",
+        "sentence_id": 2
+      }
+    ]
+  },
+  "5ab6d09255429954757d337d": {
+    "gold_answer": "from 1986 to 2013",
+    "gold_supporting_facts": [
+      {
+        "title": "1995–96 Manchester United F.C. season",
+        "sentence_id": 2
+      },
+      {
+        "title": "1995–96 Manchester United F.C. season",
+        "sentence_id": 3
+      },
+      {
+        "title": "Alex Ferguson",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a75e05c55429976ec32bc5f": {
+    "gold_answer": "9,984",
+    "gold_supporting_facts": [
+      {
+        "title": "Brown State Fishing Lake",
+        "sentence_id": 0
+      },
+      {
+        "title": "Brown County, Kansas",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5ab3e45655429976abd1bcd4": {
+    "gold_answer": "the North Atlantic Conference",
+    "gold_supporting_facts": [
+      {
+        "title": "Vermont Catamounts men's soccer",
+        "sentence_id": 0
+      },
+      {
+        "title": "Vermont Catamounts men's soccer",
+        "sentence_id": 1
+      },
+      {
+        "title": "America East Conference",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5ab29c24554299449642c932": {
+    "gold_answer": "yes",
+    "gold_supporting_facts": [
+      {
+        "title": "Giuseppe Verdi",
+        "sentence_id": 0
+      },
+      {
+        "title": "Ambroise Thomas",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5ae0d4c9554299603e418468": {
+    "gold_answer": "1969 until 1974",
+    "gold_supporting_facts": [
+      {
+        "title": "Roger O. Egeberg",
+        "sentence_id": 2
+      },
+      {
+        "title": "Richard Nixon",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a8133725542995ce29dcbdb": {
+    "gold_answer": "Robert Erskine Childers DSC",
+    "gold_supporting_facts": [
+      {
+        "title": "Henry Roth",
+        "sentence_id": 0
+      },
+      {
+        "title": "Robert Erskine Childers",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5ae7a8175542993210983ed8": {
+    "gold_answer": "Pedro Rodríguez",
+    "gold_supporting_facts": [
+      {
+        "title": "Formula One drivers from Mexico",
+        "sentence_id": 1
+      },
+      {
+        "title": "Formula One drivers from Mexico",
+        "sentence_id": 2
+      },
+      {
+        "title": "Sergio Pérez",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5ae6050f55429929b0807a5e": {
+    "gold_answer": "Sonic",
+    "gold_supporting_facts": [
+      {
+        "title": "A Rather Blustery Day",
+        "sentence_id": 1
+      },
+      {
+        "title": "Jim Cummings",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5adddccd5542997dc7907069": {
+    "gold_answer": "keyboard function keys",
+    "gold_supporting_facts": [
+      {
+        "title": "Apple Remote",
+        "sentence_id": 0
+      },
+      {
+        "title": "Apple Remote",
+        "sentence_id": 1
+      },
+      {
+        "title": "Front Row (software)",
+        "sentence_id": 0
+      },
+      {
+        "title": "Front Row (software)",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5ae2070a5542994d89d5b313": {
+    "gold_answer": "Badly Drawn Boy",
+    "gold_supporting_facts": [
+      {
+        "title": "Badly Drawn Boy",
+        "sentence_id": 0
+      },
+      {
+        "title": "Wolf Alice",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5ae22b8d554299234fd0440f": {
+    "gold_answer": "World's Best Goalkeeper",
+    "gold_supporting_facts": [
+      {
+        "title": "Kasper Schmeichel",
+        "sentence_id": 0
+      },
+      {
+        "title": "Kasper Schmeichel",
+        "sentence_id": 1
+      },
+      {
+        "title": "Peter Schmeichel",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a722b8655429971e9dc9329": {
+    "gold_answer": "Barton Lee Hazlewood",
+    "gold_supporting_facts": [
+      {
+        "title": "These Boots Are Made for Walkin'",
+        "sentence_id": 0
+      },
+      {
+        "title": "Lee Hazlewood",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5adf37a95542995ec70e8f97": {
+    "gold_answer": "1838",
+    "gold_supporting_facts": [
+      {
+        "title": "2011–12 VCU Rams men's basketball team",
+        "sentence_id": 2
+      },
+      {
+        "title": "Virginia Commonwealth University",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5abd259d55429924427fcf1a": {
+    "gold_answer": "yes",
+    "gold_supporting_facts": [
+      {
+        "title": "Dictyosperma",
+        "sentence_id": 0
+      },
+      {
+        "title": "Huernia",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a828c8355429966c78a6a50": {
+    "gold_answer": "Henry J. Kaiser",
+    "gold_supporting_facts": [
+      {
+        "title": "Kaiser Ventures",
+        "sentence_id": 0
+      },
+      {
+        "title": "Kaiser Ventures",
+        "sentence_id": 1
+      },
+      {
+        "title": "Henry J. Kaiser",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a8a3e745542996c9b8d5e70": {
+    "gold_answer": "Arena of Khazan",
+    "gold_supporting_facts": [
+      {
+        "title": "Arena of Khazan",
+        "sentence_id": 0
+      },
+      {
+        "title": "Tunnels &amp; Trolls",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5ac23ff0554299636651994d": {
+    "gold_answer": "2000",
+    "gold_supporting_facts": [
+      {
+        "title": "Shut Up, Make Love",
+        "sentence_id": 0
+      },
+      {
+        "title": "Poison (American band)",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5ae4a3265542995ad6573de5": {
+    "gold_answer": "Fujioka, Gunma",
+    "gold_supporting_facts": [
+      {
+        "title": "Hayden (musician)",
+        "sentence_id": 0
+      },
+      {
+        "title": "Buck-Tick",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5ae0361155429925eb1afc2c": {
+    "gold_answer": "Charles Eugène",
+    "gold_supporting_facts": [
+      {
+        "title": "L'Oiseau Blanc",
+        "sentence_id": 1
+      },
+      {
+        "title": "Charles Nungesser",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5abc0a5d5542993f40c73c64": {
+    "gold_answer": "no",
+    "gold_supporting_facts": [
+      {
+        "title": "Freakonomics (film)",
+        "sentence_id": 0
+      },
+      {
+        "title": "In the Realm of the Hackers",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a7cc50e554299452d57ba3e": {
+    "gold_answer": "Letters to Cleo",
+    "gold_supporting_facts": [
+      {
+        "title": "Letters to Cleo",
+        "sentence_id": 0
+      },
+      {
+        "title": "Letters to Cleo",
+        "sentence_id": 1
+      },
+      {
+        "title": "Screaming Trees",
+        "sentence_id": 0
+      },
+      {
+        "title": "Screaming Trees",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5abf63f15542997ec76fd3ea": {
+    "gold_answer": "October 1922",
+    "gold_supporting_facts": [
+      {
+        "title": "Socialist Revolutionary Party",
+        "sentence_id": 5
+      },
+      {
+        "title": "Russian Civil War",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a8ef2a75542995a26add583": {
+    "gold_answer": "2000",
+    "gold_supporting_facts": [
+      {
+        "title": "Seven Brief Lessons on Physics",
+        "sentence_id": 0
+      },
+      {
+        "title": "Carlo Rovelli",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a80721b554299485f5985ef": {
+    "gold_answer": "World War II",
+    "gold_supporting_facts": [
+      {
+        "title": "Livesey Hall War Memorial",
+        "sentence_id": 0
+      },
+      {
+        "title": "World War II casualties",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5ab51dae5542991779162d82": {
+    "gold_answer": "no",
+    "gold_supporting_facts": [
+      {
+        "title": "Elko Regional Airport",
+        "sentence_id": 0
+      },
+      {
+        "title": "Gerald R. Ford International Airport",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a7571135542992d0ec05f98": {
+    "gold_answer": "New York City",
+    "gold_supporting_facts": [
+      {
+        "title": "Ralph Hefferline",
+        "sentence_id": 0
+      },
+      {
+        "title": "Columbia University",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a7a0e1e5542990783324e1a": {
+    "gold_answer": "Scotch Collie",
+    "gold_supporting_facts": [
+      {
+        "title": "Manchester Terrier",
+        "sentence_id": 0
+      },
+      {
+        "title": "Scotch Collie",
+        "sentence_id": 0
+      },
+      {
+        "title": "Scotch Collie",
+        "sentence_id": 3
+      }
+    ]
+  },
+  "5a74106b55429979e288289e": {
+    "gold_answer": "Mumbai",
+    "gold_supporting_facts": [
+      {
+        "title": "Sachin Warrier",
+        "sentence_id": 3
+      },
+      {
+        "title": "Tata Consultancy Services",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a79311755429970f5fffe67": {
+    "gold_answer": "1962",
+    "gold_supporting_facts": [
+      {
+        "title": "Masakazu Katsura",
+        "sentence_id": 0
+      },
+      {
+        "title": "I&quot;s",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5ab2d3df554299194fa9352c": {
+    "gold_answer": "sovereignty",
+    "gold_supporting_facts": [
+      {
+        "title": "Giuseppe Arimondi",
+        "sentence_id": 2
+      },
+      {
+        "title": "Battle of Adwa",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5a760ab65542994ccc918697": {
+    "gold_answer": "Nelson Rockefeller",
+    "gold_supporting_facts": [
+      {
+        "title": "Alfred Balk",
+        "sentence_id": 0
+      },
+      {
+        "title": "Alfred Balk",
+        "sentence_id": 2
+      },
+      {
+        "title": "Nelson Rockefeller",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a7d54165542995f4f402256": {
+    "gold_answer": "Yellowcraig",
+    "gold_supporting_facts": [
+      {
+        "title": "Yellowcraigs",
+        "sentence_id": 0
+      },
+      {
+        "title": "Yellowcraigs",
+        "sentence_id": 1
+      },
+      {
+        "title": "Yellowcraigs",
+        "sentence_id": 2
+      },
+      {
+        "title": "Dirleton Castle",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5ab859a955429934fafe6d7b": {
+    "gold_answer": "Phil Spector",
+    "gold_supporting_facts": [
+      {
+        "title": "Back to Mono (1958–1969)",
+        "sentence_id": 0
+      },
+      {
+        "title": "Back to Mono (1958–1969)",
+        "sentence_id": 1
+      },
+      {
+        "title": "To Know Him Is to Love Him",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5add61d65542995b365fab21": {
+    "gold_answer": "Organizations could come together to address global issues",
+    "gold_supporting_facts": [
+      {
+        "title": "World Summit of Nobel Peace Laureates",
+        "sentence_id": 0
+      },
+      {
+        "title": "Mikhail Gorbachev",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a8e068b5542995085b37384": {
+    "gold_answer": "yes",
+    "gold_supporting_facts": [
+      {
+        "title": "Ferocactus",
+        "sentence_id": 0
+      },
+      {
+        "title": "Silene",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5abbf698554299114383a0b5": {
+    "gold_answer": "English Electric Canberra",
+    "gold_supporting_facts": [
+      {
+        "title": "No. 2 Squadron RAAF",
+        "sentence_id": 5
+      },
+      {
+        "title": "English Electric Canberra",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a8e1027554299653c1aa15f": {
+    "gold_answer": "2009 Big 12 Conference",
+    "gold_supporting_facts": [
+      {
+        "title": "2009 Colorado Buffaloes football team",
+        "sentence_id": 0
+      },
+      {
+        "title": "2009 Colorado Buffaloes football team",
+        "sentence_id": 2
+      },
+      {
+        "title": "2009 Big 12 Conference football season",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5ab84bf555429916710eb01f": {
+    "gold_answer": "1,462",
+    "gold_supporting_facts": [
+      {
+        "title": "Euromarché",
+        "sentence_id": 2
+      },
+      {
+        "title": "Carrefour",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5a77724455429972597f153e": {
+    "gold_answer": "Indianapolis Motor Speedway",
+    "gold_supporting_facts": [
+      {
+        "title": "1957 Indianapolis 500",
+        "sentence_id": 0
+      },
+      {
+        "title": "Indianapolis Motor Speedway",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a87c13f5542996e4f30890c": {
+    "gold_answer": "Rome",
+    "gold_supporting_facts": [
+      {
+        "title": "Tosca (1956 film)",
+        "sentence_id": 2
+      },
+      {
+        "title": "Franco Corelli",
+        "sentence_id": 2
+      }
+    ]
+  },
+  "5ab96ab755429970cfb8eacd": {
+    "gold_answer": "Max Martin, Savan Kotecha and Ilya Salmanzadeh",
+    "gold_supporting_facts": [
+      {
+        "title": "Delirium (Ellie Goulding album)",
+        "sentence_id": 0
+      },
+      {
+        "title": "Delirium (Ellie Goulding album)",
+        "sentence_id": 3
+      },
+      {
+        "title": "On My Mind (Ellie Goulding song)",
+        "sentence_id": 0
+      },
+      {
+        "title": "On My Mind (Ellie Goulding song)",
+        "sentence_id": 2
+      }
+    ]
+  },
+  "5a8a43eb5542996c9b8d5e82": {
+    "gold_answer": "Marion, South Australia",
+    "gold_supporting_facts": [
+      {
+        "title": "Westminster School, Adelaide",
+        "sentence_id": 0
+      },
+      {
+        "title": "Westminster School, Adelaide",
+        "sentence_id": 1
+      },
+      {
+        "title": "Marion, South Australia",
+        "sentence_id": 0
+      },
+      {
+        "title": "Marion, South Australia",
+        "sentence_id": 1
+      }
+    ]
+  },
+  "5ae73acb5542991e8301cc07": {
+    "gold_answer": "Drifting",
+    "gold_supporting_facts": [
+      {
+        "title": "D1NZ",
+        "sentence_id": 0
+      },
+      {
+        "title": "Drifting (motorsport)",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5a7320565542991f9a20c61d": {
+    "gold_answer": "Keith Bostic",
+    "gold_supporting_facts": [
+      {
+        "title": "Keith Bostic (American football)",
+        "sentence_id": 0
+      },
+      {
+        "title": "Jerry Glanville",
+        "sentence_id": 0
+      }
+    ]
+  },
+  "5ae32e125542991a06ce9946": {
+    "gold_answer": "35,124",
+    "gold_supporting_facts": [
+      {
+        "title": "Kirton End",
+        "sentence_id": 0
+      },
+      {
+        "title": "Boston, Lincolnshire",
+        "sentence_id": 2
+      }
+    ]
+  },
+  "5adc53f75542996e6852530a": {
+    "gold_answer": "no",
+    "gold_supporting_facts": [
+      {
+        "title": "Cypress",
+        "sentence_id": 0
+      },
+      {
+        "title": "Ajuga",
+        "sentence_id": 0
+      }
+    ]
+  }
+}

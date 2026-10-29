@@ -1,0 +1,142 @@
+{
+  "run": "main_v2",
+  "n": 100,
+  "model": "openai/gpt-4o-mini",
+  "bootstrap": {
+    "B": 5000,
+    "seed": 0,
+    "type": "paired percentile"
+  },
+  "methods": {
+    "M1": {
+      "name": "Draft only",
+      "n_ok": 100,
+      "em": 0.63,
+      "em_ci95": [
+        0.53,
+        0.73
+      ],
+      "f1": 0.717,
+      "delta_em_vs_m1": 0.0,
+      "delta_em_ci95": null,
+      "answers_changed": 0,
+      "wrong_to_right": 0,
+      "right_to_wrong": 0,
+      "cost_per_q_total_usd": 0.000282,
+      "cost_per_q_method_usd": 0.0,
+      "cost_ratio_vs_m1": 1.0,
+      "latency_per_q_method_s": 0.0,
+      "llm_calls": 0,
+      "verifier_labels": null,
+      "sf_recall_mean": null
+    },
+    "M2": {
+      "name": "Self-reflection",
+      "n_ok": 100,
+      "em": 0.51,
+      "em_ci95": [
+        0.41,
+        0.61
+      ],
+      "f1": 0.643,
+      "delta_em_vs_m1": -0.12,
+      "delta_em_ci95": [
+        -0.19,
+        -0.05
+      ],
+      "answers_changed": 30,
+      "wrong_to_right": 2,
+      "right_to_wrong": 14,
+      "cost_per_q_total_usd": 0.00092,
+      "cost_per_q_method_usd": 0.000638,
+      "cost_ratio_vs_m1": 3.29,
+      "latency_per_q_method_s": 3.32,
+      "llm_calls": 200,
+      "verifier_labels": null,
+      "sf_recall_mean": null
+    },
+    "M3": {
+      "name": "Critic + revision",
+      "n_ok": 100,
+      "em": 0.55,
+      "em_ci95": [
+        0.45,
+        0.65
+      ],
+      "f1": 0.652,
+      "delta_em_vs_m1": -0.08,
+      "delta_em_ci95": [
+        -0.17,
+        0.0
+      ],
+      "answers_changed": 33,
+      "wrong_to_right": 5,
+      "right_to_wrong": 13,
+      "cost_per_q_total_usd": 0.000906,
+      "cost_per_q_method_usd": 0.000624,
+      "cost_ratio_vs_m1": 3.24,
+      "latency_per_q_method_s": 3.66,
+      "llm_calls": 159,
+      "verifier_labels": null,
+      "sf_recall_mean": null
+    },
+    "M4": {
+      "name": "Draft-level verification",
+      "n_ok": 100,
+      "em": 0.61,
+      "em_ci95": [
+        0.51,
+        0.71
+      ],
+      "f1": 0.697,
+      "delta_em_vs_m1": -0.02,
+      "delta_em_ci95": [
+        -0.05,
+        0.0
+      ],
+      "answers_changed": 5,
+      "wrong_to_right": 0,
+      "right_to_wrong": 2,
+      "cost_per_q_total_usd": 0.000606,
+      "cost_per_q_method_usd": 0.000323,
+      "cost_ratio_vs_m1": 2.16,
+      "latency_per_q_method_s": 2.66,
+      "llm_calls": 106,
+      "verifier_labels": {
+        "SUPPORTED": 90,
+        "UNSUPPORTED": 4,
+        "CONTRADICTED": 6
+      },
+      "sf_recall_mean": 0.742
+    },
+    "M5": {
+      "name": "Claim-level verification",
+      "n_ok": 100,
+      "em": 0.63,
+      "em_ci95": [
+        0.53,
+        0.73
+      ],
+      "f1": 0.717,
+      "delta_em_vs_m1": 0.0,
+      "delta_em_ci95": [
+        0.0,
+        0.0
+      ],
+      "answers_changed": 0,
+      "wrong_to_right": 0,
+      "right_to_wrong": 0,
+      "cost_per_q_total_usd": 0.001335,
+      "cost_per_q_method_usd": 0.001052,
+      "cost_ratio_vs_m1": 4.77,
+      "latency_per_q_method_s": 10.24,
+      "llm_calls": 481,
+      "verifier_labels": {
+        "SUPPORTED": 353,
+        "UNSUPPORTED": 22,
+        "CONTRADICTED": 3
+      },
+      "sf_recall_mean": 0.803
+    }
+  }
+}
