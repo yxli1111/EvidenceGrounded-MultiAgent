@@ -51,12 +51,22 @@ def _verify(example, draft, targets: list[dict], scope: str, stage: str, llm):
         if not isinstance(label, str) or label not in LABELS:
             raise VerificationError("Verifier label must be SUPPORTED, CONTRADICTED or UNSUPPORTED.")
         citations = sequence(item.get("evidence_ids"), "evidence_ids", VerificationError)
-        allowed = {entry["evidence_id"] for entry in expected[target_id]["evidence"]}
+        available = expected[target_id]["evidence"]
+        allowed = {entry["evidence_id"] for entry in available}
+        lookup = {entry["evidence_id"]: entry["evidence_id"] for entry in available}
+        lookup.update({entry["citation_id"]: entry["evidence_id"] for entry in available})
+        resolved = []
         for citation in citations:
-            if not isinstance(citation, str) or citation not in allowed:
-                raise VerificationError("Citation is not in this target's retrieved evidence.")
-        if len(set(citations)) != len(citations):
-            raise VerificationError("Duplicate evidence citation.")
+            if not isinstance(citation, str) or citation not in lookup:
+                raise VerificationError(
+                    f"Citation is not in this target's retrieved evidence: target={target_id!r}, "
+                    f"citation={citation!r}, allowed_citation_ids="
+                    f"{[entry['citation_id'] for entry in available]!r}."
+                )
+            canonical = lookup[citation]
+            if canonical not in resolved:
+                resolved.append(canonical)
+        citations = resolved
         if label in {"SUPPORTED", "CONTRADICTED"} and not citations:
             raise VerificationError("SUPPORTED and CONTRADICTED require evidence citations.")
         correction = item.get("suggested_correction")
@@ -89,8 +99,9 @@ def verify_draft(
     targets = [{
         "target_id": original["draft_id"],
         "text": original["explanation"],
-        "evidence": evidence_payload(evidence, context, VerificationError),
+        "evidence": _citation_payload(evidence, context, "D1"),
     }]
+    targets[0]["allowed_evidence_ids"] = [item["citation_id"] for item in targets[0]["evidence"]]
     return _verify(example, draft, targets, "draft", "verify_draft", llm)
 
 
@@ -98,7 +109,7 @@ def verify_claims(
     example: QAInput, draft: AnswerDraft, claims: list[AtomicClaim],
     evidence_by_claim: dict[str, list[Evidence]], llm: LLMClient,
 ) -> VerificationFeedback:
-    """M5: one batched call, with evidence kept separate for each claim.
+    """M5: one isolated verification call per claim with non-empty evidence.
 
     Every claim must have a mapping entry; [] explicitly means no retrieval hits.
     Missing entries are integration errors, not evidence-insufficiency verdicts.
@@ -108,18 +119,42 @@ def verify_claims(
         raise VerificationError("evidence_by_claim must be a dict keyed by claim_id.")
     targets = []
     seen = set()
-    for claim in sequence(claims, "claims", VerificationError):
+    for index, claim in enumerate(sequence(claims, "claims", VerificationError), start=1):
         claim_id = text(claim.claim_id, "claim_id", VerificationError)
         if claim_id in seen:
             raise VerificationError("Duplicate input claim_id.")
         seen.add(claim_id)
         if claim_id not in evidence_by_claim:
             raise VerificationError("Missing evidence mapping entry for a claim.")
+        retrieved = _citation_payload(evidence_by_claim[claim_id], context, f"C{index}")
         targets.append({
             "target_id": claim_id,
             "text": text(claim.claim_text, "claim_text", VerificationError),
-            "evidence": evidence_payload(evidence_by_claim[claim_id], context, VerificationError),
+            "evidence": retrieved,
+            "allowed_evidence_ids": [item["citation_id"] for item in retrieved],
         })
     if set(evidence_by_claim) != seen:
         raise VerificationError("Evidence mapping contains an unknown claim_id.")
-    return _verify(example, draft, targets, "claim", "verify_claims", llm)
+    if not targets:
+        return _verify(example, draft, [], "claim", "verify_claims", llm)
+    items = []
+    comments = []
+    for target in targets:
+        partial = _verify(example, draft, [target], "claim", "verify_claims", llm)
+        for item in partial.items:
+            items.append({
+                "scope": item.scope, "target_id": item.target_id, "label": item.label,
+                "rationale": item.rationale, "evidence_ids": item.evidence_ids,
+                "suggested_correction": item.suggested_correction,
+            })
+        if partial.overall_comment:
+            comments.append(f"{target['target_id']}: {partial.overall_comment}")
+    return feedback_result(draft.draft_id, "verify_claims", items, "\n".join(comments))
+
+
+def _citation_payload(evidence, context, prefix: str) -> list[dict]:
+    """Unique per-target aliases keep IDs short without broadening evidence scope."""
+    result = evidence_payload(evidence, context, VerificationError)
+    for index, item in enumerate(result, start=1):
+        item["citation_id"] = f"{prefix}E{index}"
+    return result

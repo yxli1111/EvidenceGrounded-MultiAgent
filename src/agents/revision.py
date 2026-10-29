@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import logging
 from typing import TYPE_CHECKING
 
 from src.verification._common import (
@@ -13,6 +15,76 @@ from src.verification.schema_adapter import make_revision
 if TYPE_CHECKING:
     from contracts.schemas import AnswerDraft, QAInput, RevisionResult, VerificationFeedback
     from contracts.interfaces import LLMClient
+
+
+_LOG = logging.getLogger(__name__)
+
+
+def _record_edit_audit(original: dict, criticism: dict, answer: str, explanation: str, edits) -> None:
+    """Compute actual changes; model-supplied edit notes are optional metadata.
+
+    Missing or malformed notes never make valid answer fields fail. Do not invent
+    a model rationale or attribute an unreported change to a particular target.
+    E can capture this logger at INFO for the complete deterministic audit.
+    """
+    pairs = {
+        "final_answer": (original["short_answer"], answer),
+        "final_explanation": (original["explanation"], explanation),
+    }
+    changed = {field for field, (before, after) in pairs.items() if before != after}
+    valid_targets = {item["target_id"] for item in criticism["items"]}
+    notes = {field: [] for field in changed}
+    issues = []
+    aliases = {"short_answer": "final_answer", "explanation": "final_explanation"}
+    if edits is None:
+        edits = []
+    if not isinstance(edits, (list, tuple)):
+        issues.append("edits is not a list; ignored optional model notes")
+        edits = []
+    for index, edit in enumerate(edits):
+        if not isinstance(edit, dict):
+            issues.append(f"edit {index}: not an object")
+            continue
+        field = edit.get("field")
+        if not isinstance(field, str):
+            issues.append(f"edit {index}: invalid field")
+            continue
+        field = aliases.get(field, field)
+        if field not in pairs:
+            issues.append(f"edit {index}: unknown field")
+            continue
+        if field not in changed:
+            issues.append(f"edit {index}: field did not change")
+            continue
+        targets = edit.get("feedback_target_ids")
+        reason = edit.get("reason")
+        if (
+            not isinstance(targets, (list, tuple)) or not targets
+            or any(not isinstance(target, str) or target not in valid_targets for target in targets)
+            or not isinstance(reason, str) or not reason.strip()
+        ):
+            issues.append(f"edit {index}: invalid optional targets/reason")
+            continue
+        # Multiple explanations of one changed field are valid, not a duplicate edit error.
+        notes[field].append({"feedback_target_ids": list(dict.fromkeys(targets)), "reason": reason})
+    changes = []
+    for field, (before, after) in pairs.items():
+        if field not in changed:
+            continue
+        if not notes[field]:
+            issues.append(f"{field}: no valid model note; change recorded by deterministic diff")
+        changes.append({
+            "field": field, "before": before, "after": after,
+            "source": "computed_diff", "model_notes": notes[field],
+        })
+    audit = {
+        "draft_id": original["draft_id"], "feedback_id": criticism["feedback_id"],
+        "changes": changes, "issues": issues,
+    }
+    if issues:
+        _LOG.warning("D revision audit metadata: draft_id=%s feedback_id=%s issues=%s",
+                     original["draft_id"], criticism["feedback_id"], issues)
+    _LOG.info("D revision audit: %s", json.dumps(audit, ensure_ascii=False))
 
 
 def _feedback_payload(feedback, draft_id: str, context: dict) -> dict:
@@ -67,8 +139,9 @@ def revise_answer(
 
     No method argument or method-specific settings exist. Empty/positive feedback,
     or insufficient evidence without a proposed qualification, preserves the draft.
-    Detailed edit reasons live in the raw LLM response logged by C; the returned
-    dataclass keeps exactly the four fields specified by the shared contract.
+    Actual edits are computed from the before/after text and logged; optional model
+    reasons live in that audit and C's raw response. The returned dataclass keeps
+    exactly the four fields specified by the shared contract.
     """
     question, context = example_payload(example, RevisionError)
     original = draft_payload(draft, RevisionError)
@@ -86,23 +159,5 @@ def revise_answer(
     }, RevisionError)
     answer = text(data.get("final_answer"), "final_answer", RevisionError, allow_empty=True)
     explanation = text(data.get("final_explanation"), "final_explanation", RevisionError, allow_empty=True)
-    changed = set()
-    if answer != original["short_answer"]:
-        changed.add("final_answer")
-    if explanation != original["explanation"]:
-        changed.add("final_explanation")
-    traced = set()
-    for edit in sequence(data.get("edits"), "edits", RevisionError):
-        if not isinstance(edit, dict):
-            raise RevisionError("Each edit must be a JSON object.")
-        field = edit.get("field")
-        if not isinstance(field, str) or field not in changed or field in traced:
-            raise RevisionError("An edit must name one changed field exactly once.")
-        targets = sequence(edit.get("feedback_target_ids"), "feedback_target_ids", RevisionError)
-        if not targets or any(not isinstance(target, str) or target not in actionable_targets for target in targets):
-            raise RevisionError("Every edit must refer to actionable input feedback.")
-        text(edit.get("reason"), "edit.reason", RevisionError)
-        traced.add(field)
-    if traced != changed:
-        raise RevisionError("Every changed field requires an edit provenance record.")
+    _record_edit_audit(original, criticism, answer, explanation, data.get("edits"))
     return make_revision(original["draft_id"], criticism["feedback_id"], answer, explanation)

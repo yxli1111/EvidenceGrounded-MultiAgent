@@ -7,9 +7,9 @@ from .errors import ConfigurationError
 
 
 PROMPT_VERSIONS = {
-    "verify_draft": "d-draft-v1",
-    "verify_claims": "d-claims-v1",
-    "revise_answer": "d-revision-v1",
+    "verify_draft": "d-draft-v2",
+    "verify_claims": "d-claims-v2-per-claim",
+    "revise_answer": "d-revision-v2",
 }
 
 
