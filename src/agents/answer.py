@@ -244,9 +244,33 @@ def parse_issues_payload(obj: dict[str, Any]) -> tuple[list[tuple[str, str | Non
     return issues, overall
 
 
+_LENIENT_ANSWER_RE = re.compile(
+    r'^\s*\{\s*"short_answer"\s*:\s*"(?P<a>.*?)"\s*,\s*"explanation"\s*:\s*"(?P<e>.*)"\s*\}\s*$',
+    re.DOTALL)
+
+
+def lenient_answer_object(text: str) -> dict[str, Any]:
+    """Fallback for the 2-key answer schema when the model leaves a double quote unescaped
+    inside a value (e.g. the manga title I"s). Only the exact
+    {"short_answer": "...", "explanation": "..."} shape is accepted; anything else raises."""
+    candidate = text.strip()
+    m = _FENCE_RE.match(candidate)
+    if m:
+        candidate = m.group(1)
+    m = _LENIENT_ANSWER_RE.match(candidate)
+    if not m:
+        raise ValueError('reply is not a {"short_answer", "explanation"} object')
+    unesc = lambda v: v.replace('\\"', '"').replace('\\n', '\n').strip()
+    return {'short_answer': unesc(m.group('a')), 'explanation': unesc(m.group('e'))}
+
+
 def call_and_parse(llm: LLMClient, *, stage: str, messages: list[dict[str, str]],
-                   config: AgentConfig, parser) -> Any:
-    """Call the LLM and parse the reply; on a format failure, issue bounded repair calls."""
+                   config: AgentConfig, parser, lenient=None) -> Any:
+    """Call the LLM and parse the reply; on a format failure, issue bounded repair calls.
+
+    ``lenient`` (text -> dict) is tried only when strict JSON parsing fails, before any
+    repair call is made; it never changes a reply that already parses.
+    """
     raw_outputs: list[str] = []
     msgs = list(messages)
     last_err: Exception | None = None
@@ -259,11 +283,17 @@ def call_and_parse(llm: LLMClient, *, stage: str, messages: list[dict[str, str]]
             return parser(parse_json_object(resp.text))
         except (ValueError, json.JSONDecodeError) as err:
             last_err = err
+            if lenient is not None:
+                try:
+                    return parser(lenient(resp.text))
+                except (ValueError, json.JSONDecodeError):
+                    pass
             msgs = list(messages) + [
                 {'role': 'assistant', 'content': resp.text},
                 {'role': 'user', 'content': (
                     f'Your previous reply could not be used ({err}). Reply again with only the '
-                    'JSON object in exactly the requested format.')},
+                    'JSON object in exactly the requested format. Escape any double quote inside '
+                    'a string value as \\".')},
             ]
     raise AgentOutputError(f'{stage}: unparseable LLM output after '
                            f'{config.max_parse_repairs + 1} attempt(s): {last_err}', raw_outputs)
@@ -308,7 +338,8 @@ def generate_draft(example: QAInput, llm: LLMClient, config: AgentConfig) -> Ans
     messages = prompt.render(question=example.question.strip(),
                              context=render_context(example.context))
     short, expl = call_and_parse(llm, stage=STAGE_DRAFT, messages=messages,
-                                 config=config, parser=parse_answer_payload)
+                                 config=config, parser=parse_answer_payload,
+                                 lenient=lenient_answer_object)
     return AnswerDraft(draft_id=draft_id_for(example), short_answer=short, explanation=expl)
 
 

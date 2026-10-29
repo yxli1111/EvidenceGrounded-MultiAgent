@@ -156,6 +156,28 @@ class TestDraft(unittest.TestCase):
         self.assertNotEqual(llm.calls[0].messages, llm.calls[1].messages)
         self.assertEqual(llm.calls[1].messages[2], {'role': 'assistant', 'content': 'not json'})
 
+    def test_unescaped_quote_recovered_without_repair_call(self):
+        # real dev failure: manga title I"s inside an unescaped JSON string
+        raw = '{"short_answer": "1962", "explanation": "Masakazu Katsura is the writer of the manga series I"s. He was born on December 10, 1962."}'
+        for stage, fn in ((A.STAGE_DRAFT, lambda llm: A.generate_draft(BRIDGE_EXAMPLE, llm, CFG)),
+                          (A.STAGE_SELF_REVISE, lambda llm: B.self_revise(
+                              BRIDGE_EXAMPLE, shared_draft(), VerificationFeedback('f', []), llm, CFG))):
+            llm = MockLLMClient({stage: raw})
+            out = fn(llm)
+            ans = out.short_answer if hasattr(out, 'short_answer') else out.final_answer
+            expl = out.explanation if hasattr(out, 'explanation') else out.final_explanation
+            self.assertEqual(ans, '1962')
+            self.assertIn('series I"s. He was born', expl)
+            self.assertEqual(len(llm.calls), 1)                  # no repair call needed
+
+    def test_lenient_parser_is_strict_about_shape(self):
+        with self.assertRaises(ValueError):
+            A.lenient_answer_object('{"answer": "x"}')
+        with self.assertRaises(ValueError):
+            A.lenient_answer_object('not json at all')
+        self.assertEqual(A.lenient_answer_object('```json\n{"short_answer": "a", "explanation": "b \\"c\\""}\n```'),
+                         {'short_answer': 'a', 'explanation': 'b "c"'})
+
     def test_unrecoverable_output_raises_with_raw_outputs(self):
         llm = MockLLMClient({A.STAGE_DRAFT: 'bad', A.STAGE_DRAFT + '.repair': ['still bad']})
         with self.assertRaises(A.AgentOutputError) as ctx:

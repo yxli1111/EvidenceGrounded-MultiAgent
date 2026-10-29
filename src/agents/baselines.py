@@ -23,7 +23,7 @@ from contracts.interfaces import LLMClient, VerificationPort
 from contracts.schemas import AnswerDraft, QAInput, RevisionResult, VerificationFeedback
 
 from .answer import (STAGE_SELF_CHECK, STAGE_SELF_REVISE, AgentConfig, as_draft, as_qa_input,
-                     call_and_parse,
+                     call_and_parse, lenient_answer_object,
                      load_prompt, parse_answer_payload, parse_issues_payload,
                      render_context)
 from .independent_critic import independent_critique, issues_to_feedback
@@ -74,7 +74,8 @@ def self_revise(example: QAInput, draft: AnswerDraft, feedback: VerificationFeed
                              explanation=draft.explanation or '(empty)',
                              review=format_review(feedback))
     short, expl = call_and_parse(llm, stage=STAGE_SELF_REVISE, messages=messages,
-                                 config=config, parser=parse_answer_payload)
+                                 config=config, parser=parse_answer_payload,
+                                 lenient=lenient_answer_object)
     return RevisionResult(draft_id=draft.draft_id, feedback_id=feedback.feedback_id,
                           final_answer=short, final_explanation=expl)
 

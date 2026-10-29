@@ -1,0 +1,206 @@
+{
+ "run_dir": "results\\runs\\dev_A_v1",
+ "run_metadata": {
+  "preliminary": true,
+  "n_examples": 50,
+  "n_records": 150,
+  "split": "dev",
+  "model": "openai/gpt-4o-mini",
+  "query_include_question": true,
+  "m4_top_k": 5,
+  "m5_top_k_per_claim": 5,
+  "n_dev_excluded": 0,
+  "run_timestamp": "20261029_030509",
+  "reused_drafts_from": "dev_A_v2",
+  "methods": "M1,M2,M3"
+ },
+ "n_examples": 50,
+ "prompt_versions": {
+  "answer.draft": "draft_v1@1dd344355e",
+  "baselines.self_check": "self_check_v1@cd8e1fe212",
+  "baselines.self_revise": "self_revise_v1@3138997ca0",
+  "baselines.independent_critic": "independent_critic_v1@344d99fba2",
+  "verify_draft": "d-draft-v2",
+  "verify_claims": "d-claims-v2-per-claim",
+  "revise_answer": "d-revision-v2"
+ },
+ "headline": {
+  "M1": {
+   "n": 50,
+   "n_ok": 50,
+   "n_error": 0,
+   "em": 0.54,
+   "f1": 0.6934,
+   "em_on_ok_only": 0.54,
+   "final_is_sentence_rate": 0.02,
+   "mean_cost_usd": 0.0,
+   "mean_calls": 0.0,
+   "mean_latency_s": 0.0
+  },
+  "M2": {
+   "n": 50,
+   "n_ok": 50,
+   "n_error": 0,
+   "em": 0.52,
+   "f1": 0.6642,
+   "em_on_ok_only": 0.52,
+   "final_is_sentence_rate": 0.1,
+   "mean_cost_usd": 0.00067,
+   "mean_calls": 2.02,
+   "mean_latency_s": 4.036
+  },
+  "M3": {
+   "n": 50,
+   "n_ok": 50,
+   "n_error": 0,
+   "em": 0.54,
+   "f1": 0.6487,
+   "em_on_ok_only": 0.54,
+   "final_is_sentence_rate": 0.06,
+   "mean_cost_usd": 0.000797,
+   "mean_calls": 1.9,
+   "mean_latency_s": 4.981
+  }
+ },
+ "paired_bootstrap": {
+  "M2-M1:em": {
+   "n": 50,
+   "delta_obs": -0.02,
+   "ci_low": -0.14,
+   "ci_high": 0.1,
+   "confidence": 0.95,
+   "p_value": 0.6914,
+   "n_resamples": 10000
+  },
+  "M2-M1:f1": {
+   "n": 50,
+   "delta_obs": -0.0293,
+   "ci_low": -0.1413,
+   "ci_high": 0.088,
+   "confidence": 0.95,
+   "p_value": 0.6888,
+   "n_resamples": 10000
+  },
+  "M3-M1:em": {
+   "n": 50,
+   "delta_obs": 0.0,
+   "ci_low": -0.1,
+   "ci_high": 0.12,
+   "confidence": 0.95,
+   "p_value": 0.5638,
+   "n_resamples": 10000
+  },
+  "M3-M1:f1": {
+   "n": 50,
+   "delta_obs": -0.0447,
+   "ci_low": -0.1485,
+   "ci_high": 0.0592,
+   "confidence": 0.95,
+   "p_value": 0.7922,
+   "n_resamples": 10000
+  },
+  "M3-M2:em": {
+   "n": 50,
+   "delta_obs": 0.02,
+   "ci_low": -0.08,
+   "ci_high": 0.12,
+   "confidence": 0.95,
+   "p_value": 0.4263,
+   "n_resamples": 10000
+  },
+  "M3-M2:f1": {
+   "n": 50,
+   "delta_obs": -0.0155,
+   "ci_low": -0.1186,
+   "ci_high": 0.0864,
+   "confidence": 0.95,
+   "p_value": 0.6133,
+   "n_resamples": 10000
+  },
+  "M3-M1:em (M3 ok subset)": {
+   "n": 50,
+   "delta_obs": 0.0,
+   "ci_low": -0.1,
+   "ci_high": 0.12,
+   "confidence": 0.95,
+   "p_value": 0.5638,
+   "n_resamples": 10000
+  }
+ },
+ "transitions": {
+  "M2": {
+   "wrong->wrong": 19,
+   "correct->correct": 22,
+   "correct->wrong": 5,
+   "wrong->correct": 4
+  },
+  "M3": {
+   "wrong->wrong": 19,
+   "correct->correct": 23,
+   "correct->wrong": 4,
+   "wrong->correct": 4
+  }
+ },
+ "correct_to_wrong_reasons": {
+  "M2": {
+   "content: answer replaced by a different answer": 2,
+   "format: final contains gold but is longer (sentence / extra words)": 3
+  },
+  "M3": {
+   "content: answer replaced by a different answer": 2,
+   "format: final contains gold but is longer (sentence / extra words)": 2
+  }
+ },
+ "feedback_behaviour": {
+  "M2": {
+   "feedback_recorded": true,
+   "issue_raised_rate_when_draft_correct": 0.6667,
+   "issue_raised_rate_when_draft_wrong": 0.7391,
+   "mean_items": 1.02,
+   "answer_changed_rate_ok": 0.3
+  },
+  "M3": {
+   "feedback_recorded": true,
+   "issue_raised_rate_when_draft_correct": 0.8889,
+   "issue_raised_rate_when_draft_wrong": 0.913,
+   "mean_items": 1.42,
+   "answer_changed_rate_ok": 0.34
+  }
+ },
+ "errors": {
+  "M1": {},
+  "M2": {},
+  "M3": {}
+ },
+ "by_question_type": {
+  "M1:bridge": {
+   "n": 36,
+   "em": 0.4722
+  },
+  "M1:comparison": {
+   "n": 14,
+   "em": 0.7143
+  },
+  "M2:bridge": {
+   "n": 36,
+   "em": 0.5
+  },
+  "M2:comparison": {
+   "n": 14,
+   "em": 0.5714
+  },
+  "M3:bridge": {
+   "n": 36,
+   "em": 0.4722
+  },
+  "M3:comparison": {
+   "n": 14,
+   "em": 0.7143
+  }
+ },
+ "notes": [
+  "errors count as EM/F1 = 0 (E rule); draft correctness taken from the shared draft, not from error rows",
+  "final_is_sentence and c->w reasons are heuristics for triage, not official metrics",
+  "PRELIMINARY: pilot run, not the frozen evaluation"
+ ]
+}
