@@ -40,6 +40,14 @@ record.prompt_versions.update(agent.prompt_versions)
 
 To keep M2's self-check feedback in `ExperimentRecord.feedback`, E can call `baselines.run_m2(example, draft, llm, config)`. It returns `draft`, `feedback` and `final` together.
 
+## Prompt v2 (2026-10-29), driven by the pilot run main_n100
+- Pilot finding (E): M2/M3 often rewrote a correct `short_answer` as a full sentence (M2: 12 of 19 correct→wrong cases; M3: 10 of 18).
+- `self_revise_v2`: copy `short_answer` unchanged unless the review shows it is wrong; strict span-only format with good/bad examples.
+- `self_check_v2` / `independent_critic_v2` (changed identically so M2 and M3 stay comparable): report only real factual or reasoning problems, not style; corrections to the short answer must be the span only (this also feeds D's revision in M3).
+- `answer.draft` stays **v1** (`draft_v1@1dd344355e`), so the cached shared drafts remain valid and only M2–M5 need re-running.
+- v1 files are kept for provenance. Validate on the **dev** split only; the pilot 100 must not be used to tune further if they are later reported (label them as a pilot).
+- Windows test fix: the CRLF test double-converted files that were already CRLF. The production hash was always identical on Windows and Linux.
+
 ## Integration additions (v1.1)
 
 - `AnswerAgent` methods accept the contract dataclasses **or** the equivalent plain dicts. Today B's loader yields dict examples, and E's runner re-reads cached drafts as dicts. Use `as_qa_input` / `as_draft` in `src/agents/answer.py`.

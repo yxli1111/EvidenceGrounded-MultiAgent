@@ -57,7 +57,7 @@ class TestPromptsAndRendering(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             shutil.copytree(orig, Path(tmp) / 'prompts')
             for f in (Path(tmp) / 'prompts').rglob('*.md'):
-                f.write_bytes(f.read_bytes().replace(b'\n', b'\r\n'))
+                f.write_bytes(f.read_bytes().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n'))  # CRLF regardless of checkout
             try:
                 A.PROMPTS_DIR = Path(tmp) / 'prompts'
                 crlf = A.prompt_versions()
@@ -73,6 +73,25 @@ class TestPromptsAndRendering(unittest.TestCase):
     def test_template_tolerates_braces_and_dollars_in_values(self):
         msgs = A.load_prompt('answer.draft').render(question='Cost {x} in $USD?', context='c')
         self.assertIn('Cost {x} in $USD?', msgs[1]['content'])
+
+
+    def test_v2_prompts_active_and_draft_prompt_unchanged(self):
+        self.assertTrue(A.PROMPT_VERSIONS['answer.draft'].startswith('draft_v1@1dd344355e'))
+        for pid in ('baselines.self_check', 'baselines.self_revise', 'baselines.independent_critic'):
+            self.assertIn('_v2@', A.PROMPT_VERSIONS[pid])
+        revise = A.load_prompt('baselines.self_revise').render(
+            question='q', context='c', short_answer='x', explanation='e', review='r')[1]['content']
+        self.assertIn('NEVER a sentence', revise)
+        self.assertIn('copy it exactly', revise)
+        for pid in ('baselines.self_check', 'baselines.independent_critic'):
+            text = A.load_prompt(pid).render(question='q', context='c', short_answer='x',
+                                             explanation='e')[1]['content']
+            self.assertIn('ONLY the replacement answer span', text)
+
+    def test_v1_prompt_files_kept_for_provenance(self):
+        for rel in ('baselines/self_check_v1.md', 'baselines/self_revise_v1.md',
+                    'baselines/independent_critic_v1.md'):
+            self.assertTrue((A.PROMPTS_DIR / rel).exists(), rel)
 
 
 class TestJsonParsing(unittest.TestCase):

@@ -78,9 +78,12 @@ PROMPTS_DIR = Path(__file__).resolve().parents[2] / 'prompts'
 # prompt id -> relative file path (under prompts/)
 PROMPT_FILES: dict[str, str] = {
     'answer.draft': 'answer/draft_v1.md',
-    'baselines.self_check': 'baselines/self_check_v1.md',
-    'baselines.self_revise': 'baselines/self_revise_v1.md',
-    'baselines.independent_critic': 'baselines/independent_critic_v1.md',
+    # v2 (2026-10-29): short_answer must stay a minimal span; critics report only real
+    # problems and give span-only answer corrections. v1 files are kept for provenance
+    # (pilot run main_n100 used v1). answer.draft stays v1, so shared drafts can be reused.
+    'baselines.self_check': 'baselines/self_check_v2.md',
+    'baselines.self_revise': 'baselines/self_revise_v2.md',
+    'baselines.independent_critic': 'baselines/independent_critic_v2.md',
 }
 
 _SECTION_RE = re.compile(r'^### (SYSTEM|USER)\s*$', re.MULTILINE)
