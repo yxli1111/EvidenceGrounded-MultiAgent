@@ -1,0 +1,12 @@
+{
+  "preliminary": true,
+  "n_examples": 100,
+  "n_records": 500,
+  "split": "validation",
+  "model": "openai/gpt-4o-mini",
+  "query_include_question": true,
+  "m4_top_k": 5,
+  "m5_top_k_per_claim": 5,
+  "n_dev_excluded": 50,
+  "run_timestamp": "20261029_021234"
+}

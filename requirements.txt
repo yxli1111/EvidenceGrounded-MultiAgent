@@ -1,7 +1,23 @@
-# C module - OpenRouter and Atomic Claim Extraction
-# Tested with Python 3.11.3
+# Shared requirements for DSA4213 Group 15
+# Tested with Python 3.11
+#
+# Pinned versions are from each contributor's confirmed working environment.
+# Unpinned ranges are where the contributor has not yet specified a version.
+# Run: pip install -r requirements.txt
 
+# ── C (OpenRouter / claim extraction) ─────────────────────────────────────────
 openai==3.37.0
 python-dotenv==1.2.4
 httpx==0.28.1
+
+# ── B (retrieval: dense embedding + HotpotQA dataset) ─────────────────────────
+sentence-transformers>=2.6,<4
+datasets>=2.14,<4
+
+# ── E (evaluation & runner) ───────────────────────────────────────────────────
+pandas>=2.0,<3
+numpy>=1.24,<3
+matplotlib>=3.7,<4
+
+# ── testing (all contributors) ────────────────────────────────────────────────
 pytest==9.1.1

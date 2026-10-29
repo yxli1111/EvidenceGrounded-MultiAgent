@@ -219,8 +219,14 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Claude Code
+.claude/
+
 # Local experiment logs
 /logs/
 
 # Local LLM cache
 /cache/
+
+# Raw LLM audit log (large, not for review)
+results/runs/*/raw_calls.jsonl
