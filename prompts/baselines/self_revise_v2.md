@@ -8,6 +8,7 @@ Revise your draft using your own review below.
 - Change "short_answer" ONLY if your review shows that the draft's short answer is wrong. Otherwise copy it exactly, character for character.
 - Fix the explanation only where your review identified a problem. If the review found no problems, return the draft unchanged.
 - Do not introduce new facts that are not in the context.
+- Never replace a specific answer with "unknown", "not specified" or similar. If the context seems incomplete, keep your best answer.
 
 Output format (JSON object, no markdown fences, no extra keys):
 {"short_answer": "<answer>", "explanation": "<explanation>"}

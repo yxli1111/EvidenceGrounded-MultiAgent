@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -75,16 +76,31 @@ class AgentOutputError(ValueError):
 
 PROMPTS_DIR = Path(__file__).resolve().parents[2] / 'prompts'
 
-# prompt id -> relative file path (under prompts/)
-PROMPT_FILES: dict[str, str] = {
-    'answer.draft': 'answer/draft_v1.md',
-    # v2 (2026-10-29): short_answer must stay a minimal span; critics report only real
-    # problems and give span-only answer corrections. v1 files are kept for provenance
-    # (pilot run main_n100 used v1). answer.draft stays v1, so shared drafts can be reused.
-    'baselines.self_check': 'baselines/self_check_v2.md',
-    'baselines.self_revise': 'baselines/self_revise_v2.md',
-    'baselines.independent_critic': 'baselines/independent_critic_v2.md',
+# prompt id -> relative file path (under prompts/), per prompt set.
+# v2 (2026-10-29): short_answer must stay a minimal span; critics report only real problems,
+# give span-only answer corrections and never push "unknown". v1 = pilot run main_n100.
+# answer.draft is v1 in both sets, so cached shared drafts stay valid across sets.
+PROMPT_SETS: dict[str, dict[str, str]] = {
+    'v1': {
+        'answer.draft': 'answer/draft_v1.md',
+        'baselines.self_check': 'baselines/self_check_v1.md',
+        'baselines.self_revise': 'baselines/self_revise_v1.md',
+        'baselines.independent_critic': 'baselines/independent_critic_v1.md',
+    },
+    'v2': {
+        'answer.draft': 'answer/draft_v1.md',
+        'baselines.self_check': 'baselines/self_check_v2.md',
+        'baselines.self_revise': 'baselines/self_revise_v2.md',
+        'baselines.independent_critic': 'baselines/independent_critic_v2.md',
+    },
 }
+DEFAULT_PROMPT_SET = 'v2'
+# Ablation switch for dev comparisons only (e.g. set A_PROMPT_SET=v1). The active versions are
+# always logged through PROMPT_VERSIONS / ExperimentRecord.prompt_versions.
+PROMPT_SET = os.environ.get('A_PROMPT_SET', DEFAULT_PROMPT_SET).strip() or DEFAULT_PROMPT_SET
+if PROMPT_SET not in PROMPT_SETS:
+    raise ValueError(f'A_PROMPT_SET must be one of {sorted(PROMPT_SETS)}, got {PROMPT_SET!r}')
+PROMPT_FILES: dict[str, str] = dict(PROMPT_SETS[PROMPT_SET])
 
 _SECTION_RE = re.compile(r'^### (SYSTEM|USER)\s*$', re.MULTILINE)
 

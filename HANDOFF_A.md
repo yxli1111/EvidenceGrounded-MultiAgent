@@ -40,13 +40,24 @@ record.prompt_versions.update(agent.prompt_versions)
 
 To keep M2's self-check feedback in `ExperimentRecord.feedback`, E can call `baselines.run_m2(example, draft, llm, config)`. It returns `draft`, `feedback` and `final` together.
 
-## Prompt v2 (2026-10-29), driven by the pilot run main_n100
-- Pilot finding (E): M2/M3 often rewrote a correct `short_answer` as a full sentence (M2: 12 of 19 correct→wrong cases; M3: 10 of 18).
-- `self_revise_v2`: copy `short_answer` unchanged unless the review shows it is wrong; strict span-only format with good/bad examples.
-- `self_check_v2` / `independent_critic_v2` (changed identically so M2 and M3 stay comparable): report only real factual or reasoning problems, not style; corrections to the short answer must be the span only (this also feeds D's revision in M3).
-- `answer.draft` stays **v1** (`draft_v1@1dd344355e`), so the cached shared drafts remain valid and only M2–M5 need re-running.
-- v1 files are kept for provenance. Validate on the **dev** split only; the pilot 100 must not be used to tune further if they are later reported (label them as a pilot).
+## Prompt v2 (2026-10-29), driven by the pilot run main_n100 (v1)
+Pilot (n=100, gpt-4o-mini, prompt set v1). Scored with E's functions via `research/A_baselines_analysis.py`:
+- EM M1 0.63 / M2 0.46 / M3 0.34 (errors = 0). Paired bootstrap CIs exclude 0 for M2-M1, M3-M1 and M3-M2.
+- M2 correct→wrong 19 (12 format: final contains the gold answer but as a sentence; 3 replaced by "unknown"; 4 other). M3 correct→wrong 18 (10 format), plus 19 errors from D's v1 edit-provenance validation.
+- Critics raise issues about equally often on correct and wrong drafts (M2 70% vs 70%, M3 67% vs 78%), so they barely discriminate.
+
+Prompt set v2 (default):
+- `self_revise_v2`: copy `short_answer` unless the review shows it is wrong; span-only format with examples; never replace an answer with "unknown".
+- `self_check_v2` / `independent_critic_v2` (changed identically): only real factual or reasoning problems, no style; answer corrections must be the span only; check both paragraphs before claiming information is missing; never suggest "unknown".
+- `answer.draft` stays **v1** (`draft_v1@1dd344355e`) in both sets, so cached shared drafts remain valid.
+- `A_PROMPT_SET=v1` reproduces the pilot prompts exactly (same hashes) for a same-question dev comparison. The active versions are always logged in `prompt_versions`.
+- Because the pilot informed v2, the 100 pilot questions should be reported as a pilot only; the frozen evaluation must use unseen questions.
 - Windows test fix: the CRLF test double-converted files that were already CRLF. The production hash was always identical on Windows and Linux.
+- All A entry points (`AnswerAgent` methods and module-level `run_m1/run_m2/run_m3/self_check/self_revise/independent_critique`) accept the contract dataclasses or the equivalent dicts.
+
+## Analysis tooling
+- `python research/A_baselines_analysis.py --run results/runs/<run>` writes `results/analysis/A_<run>/{summary.json, per_example_A.csv, cases.md}`.
+- `research/A_baselines.ipynb` shows the same tables for several runs side by side.
 
 ## Integration additions (v1.1)
 

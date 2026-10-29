@@ -1,0 +1,266 @@
+# A: M2/M3 case list (PRELIMINARY pilot)
+
+## M2 correct->wrong (19)
+
+- **5a75f0ea5542994ccc91866c** (bridge) Q: What major truck road is located in Backford Cross?
+  - gold: `The A41` | draft: `A41` | final: `A41, which is a major truck road`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer 'A41' is correct, but it does not specify that the A41 is a major truck road, which is the focus of the question. | fix: A41, which is a major trunk road.
+  - feedback: The explanation correctly identifies the A41 as a major trunk road and its connection to Backford Cross, but it could clarify that the A41 is a major truck route specifically, as the question asks for a major truck road. | fix: Add that the A41 is a major truck road.
+- **5a77152355429966f1a36c2e** (bridge) Q: What was the Roud Folk Song Index of the nursery rhyme inspiring What Are Little Girls Made Of?
+  - gold: `821` | draft: `821` | final: `no`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer provided (821) is incorrect because it refers to the Roud Folk Song Index number of 'What Are Little Boys Made Of?' instead of 'What Are Little Girls Made Of?'. | fix: The correct Roud Folk Song Index number for 'What Are Little Girls Made Of?' should be provided, but it is not present in the context.
+  - feedback: The explanation incorrectly states that the title of the episode 'What Are Little Girls Made Of?' is taken from the nursery rhyme 'What Are Little Boys Made Of?'. The context does not provide any information about the Ro | fix: Clarify that the context does not provide the Roud Folk Song Index number for 'What Are Little Girls Made Of?'.
+- **5a7a455c5542994f819ef1a7** (comparison) Q: Who died first, George Archainbaud or Ralph Murphy?
+  - gold: `George Archainbaud` | draft: `George Archainbaud` | final: `Ralph Murphy`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is incorrect; it states George Archainbaud, but the question asks who died first, which should be Ralph Murphy since he died later than Archainbaud. | fix: Change the short answer to Ralph Murphy.
+- **5a8361b65542992ef85e22a0** (bridge) Q: Vince Phillips held a junior welterweight title by an organization recognized by what larger Hall of Fame?
+  - gold: `International Boxing Hall of Fame` | draft: `International Boxing Hall of Fame` | final: `International Boxing Hall of Fame (IBHOF)`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer is incorrect; it should refer to the International Boxing Hall of Fame (IBHOF) instead of the International Boxing Hall of Fame, which is not mentioned in the context. | fix: International Boxing Hall of Fame (IBHOF)
+- **5a84c4135542994c784dda31** (comparison) Q: Are Yingkou and Fuding the same level of city?
+  - gold: `no` | draft: `no` | final: `no, they are not the same level of city.`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer 'no' is correct, but it could be more explicitly stated that they are not the same level of city. | fix: Change the short answer to 'no, they are not the same level of city.'
+  - feedback: The explanation correctly states the administrative levels of Yingkou and Fuding, but it does not clarify that a prefecture-level city is a higher administrative level than a county-level city, which is essential for und | fix: Add that a prefecture-level city is a higher administrative level than a county-level city.
+- **5a87c13f5542996e4f30890c** (bridge) Q: In what city did the "Prince of tenors" star in a film based on an opera by Giacomo Puccini?
+  - gold: `Rome` | draft: `Rome` | final: `Tosca, Rome`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer 'Rome' is correct, but it does not directly address the question about the city where the 'Prince of tenors' starred in a film based on an opera by Giacomo Puccini, as it does not specify that the film i | fix: Specify that the film is 'Tosca' in the short answer.
+  - feedback: The explanation correctly states that the film 'Tosca' is based on an opera by Puccini and that it was made in Rome, but it does not clarify that Franco Corelli is the 'Prince of tenors' referred to in the question, whic | fix: Add a statement clarifying that Franco Corelli is known as the 'Prince of tenors' and starred in the film 'Tosca'.
+- **5a887bc0554299206df2b2b6** (bridge) Q: The Argentine PGA Championship record holder has won how many tournaments worldwide?
+  - gold: `230` | draft: `230` | final: `230 tournaments worldwide`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer '230' is correct but does not specify that it refers to the number of tournaments won worldwide by Roberto De Vicenzo, which is essential for clarity. | fix: 230 tournaments worldwide
+  - feedback: The explanation correctly states that Roberto De Vicenzo won more than 230 tournaments worldwide, but it does not clarify that this includes his 16 victories in the Argentine PGA Championship, which is relevant to the co | fix: Add that his 16 victories in the Argentine PGA Championship are part of his overall tournament wins.
+- **5a8979f4554299669944a52e** (bridge) Q: What is the middle name of the actress who plays Bobbi Bacha in Suburban Madness?
+  - gold: `Ann` | draft: `Ann` | final: `Sela Ann Ward`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer 'Ann' is correct as it is Sela Ward's middle name, but it does not explicitly answer the question about the middle name of the actress who plays Bobbi Bacha in Suburban Madness, as it lacks context about | fix: The short answer should be 'Sela Ann Ward' to clarify that it is the middle name of the actress who plays Bobbi Bacha.
+  - feedback: The explanation correctly states that Sela Ward plays Bobbi Bacha and provides her full name, but it could be clearer by explicitly stating that 'Ann' is her middle name in relation to the question asked. | fix: Add a statement that explicitly connects 'Ann' as the middle name of Sela Ward, the actress who plays Bobbi Bacha.
+- **5a8e1027554299653c1aa15f** (bridge) Q: Which year and which conference was the 14th season for this conference as part of the NCAA Division that the Colorado Buffaloes played in with a record of 2-6 in conference play?
+  - gold: `2009 Big 12 Conference` | draft: `2009, Big 12 Conference` | final: `2009, Big 12 Conference (Colorado Buffaloes football team)`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer is correct, but it does not specify that the Colorado Buffaloes played in the Big 12 Conference during the 2009 season, which is crucial for clarity. | fix: 2009, Big 12 Conference (Colorado Buffaloes football team)
+- **5a8f4c8d554299458435d5a3** (bridge) Q: Scott Parkin has been a vocal critic of Exxonmobil and another corporation that has operations in how many countries ?
+  - gold: `more than 70 countries` | draft: `more than 70 countries` | final: `unknown`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer states 'more than 70 countries', which is correct for Halliburton but does not address the question about Exxonmobil's operations. | fix: Change the short answer to reflect the number of countries Exxonmobil operates in, which is not provided in the context.
+- **5ab659e355429954757d324e** (bridge) Q: hree Men on a Horse is a play by a playwright born in which year ?
+  - gold: `1887` | draft: `1887` | final: `unknown`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is incorrect because it attributes the birth year to George Abbott, who is not the only playwright associated with the play; it is co-written by John Cecil Holm, whose birth year is not provided in the c
+- **5ab84bf555429916710eb01f** (bridge) Q: In 1991 Euromarché was bought by a chain that operated how any hypermarkets at the end of 2016?
+  - gold: `1,462` | draft: `1,462` | final: `Carrefour`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer does not address the question about how many hypermarkets Euromarché was bought by a chain that operated at the end of 2016; it incorrectly provides the number of hypermarkets operated by Carrefour inste | fix: Change the short answer to indicate that Euromarché was bought by Carrefour, which operated 1,462 hypermarkets at the end of 2016.
+- **5ab978855542996be2020512** (bridge) Q: Over how many centuries were the "dwelling place of the dead" built?
+  - gold: `three centuries` | draft: `three centuries` | final: `three centuries (11th to 14th century)`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer 'three centuries' is correct, but it does not explicitly address the question of 'over how many centuries' in a clear manner. It could be misinterpreted as referring to a specific duration rather than th | fix: The short answer should be rephrased to 'three centuries (11th to 14th century)' to clarify that it refers to the number of centuries.
+  - feedback: The explanation correctly states that the dwellings were built between 1100 and 1425 AD and that this indicates a span of time. However, it does not explicitly mention that this time frame covers three centuries, which i | fix: Add a statement in the explanation that explicitly states that the time frame from 1100 to 1425 AD encompasses three centuries.
+- **5aba749055429901930fa7d8** (comparison) Q: What occupation do Chris Menges and Aram Avakian share?
+  - gold: `director` | draft: `director` | final: `film director`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer 'director' is correct, but it could be more specific by stating 'film director' to align with the context provided. | fix: film director
+- **5ac2d1d755429921a00ab053** (comparison) Q: Who had the best singles ranking, Roberta Vinci or Jorge Lozano?
+  - gold: `Roberta Vinci` | draft: `Roberta Vinci` | final: `Roberta Vinci had the better singles ranking`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer is correct, but it could be more explicitly stated that Roberta Vinci had the better singles ranking compared to Jorge Lozano. | fix: Roberta Vinci had the better singles ranking.
+  - feedback: The explanation correctly states Vinci's and Lozano's highest singles rankings, but it does not clarify that Vinci's ranking is higher than Lozano's, which is essential for the conclusion. | fix: Add a statement that explicitly compares the rankings, stating that Vinci's ranking of World No. 7 is higher than Lozano's World No. 51.
+- **5adccd795542990d50227d2c** (bridge) Q: In which city is the ambassador of the Rabat-Salé-Kénitra administrative region to China based?
+  - gold: `Beijing` | draft: `Beijing` | final: `Rabat`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer 'Beijing' is incorrect because the question specifically asks for the city where the ambassador of the Rabat-Salé-Kénitra administrative region to China is based, which is Rabat, not Beijing. | fix: Rabat
+  - feedback: The explanation incorrectly states that the Moroccan ambassador in Beijing represents the Government in Rabat to China, which does not directly answer the question about the city of the ambassador for the Rabat-Salé-Kéni | fix: Clarify that the ambassador represents Morocco in China, but the city of the Rabat-Salé-Kénitra region is Rabat.
+- **5add11935542994734353827** (comparison) Q: Were the bands Skin Yard and Ostava from the U.S.?
+  - gold: `no` | draft: `no` | final: `No, Skin Yard is from the U.S. and Ostava is from Bulgaria.`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer 'no' is correct, but it lacks clarity in directly addressing the question about both bands. It should explicitly state that Skin Yard is from the U.S. while Ostava is not. | fix: Change the short answer to 'No, Skin Yard is from the U.S. and Ostava is from Bulgaria.'
+- **5ae2b770554299495565db0f** (bridge) Q: In what month is the annual documentary film festival, that is presented by the fortnightly published British journal of literary essays, held? 
+  - gold: `March and April` | draft: `March and April` | final: `not specified`
+  - reason: content: answer replaced by a different answer
+  - feedback: The question specifically asks for the month of the annual documentary film festival presented by the fortnightly published British journal of literary essays, which is the London Review of Books. The draft incorrectly i | fix: The annual documentary film festival presented by the London Review of Books is not specified in the context, so the answer should indicate that the spe
+- **5ae738f75542991bbc9761c4** (bridge) Q: What year was the brother of this first round draft pick by the Washington Redskins drafted?
+  - gold: `2003` | draft: `2003` | final: `2003 (the year Boss Bailey was drafted)`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer '2003' is correct, but it does not specify that it refers to the year Boss Bailey was drafted, which is essential for clarity. | fix: Change short_answer to '2003 (the year Boss Bailey was drafted)'.
+  - feedback: The explanation correctly states the draft years for both Champ and Boss Bailey, but it could be clearer by explicitly stating that the question is about Boss Bailey's draft year. | fix: Add a sentence at the beginning of the explanation to clarify that the question is asking about Boss Bailey's draft year.
+
+## M2 wrong->correct (2)
+
+- **5a80071f5542992bc0c4a684** (bridge) Q: Alice David is the voice of Lara Croft in a video game developed by which company ?
+  - gold: `Crystal Dynamics` | draft: `Square Enix` | final: `Crystal Dynamics`
+  - feedback: The short answer 'Square Enix' is incorrect because it does not specify the developer of the game, which is Crystal Dynamics. The question specifically asks for the company that developed the game, not the publisher. | fix: Change the short answer to 'Crystal Dynamics'.
+- **5adc53f75542996e6852530a** (comparison) Q: Are both Cypress and Ajuga genera?
+  - gold: `no` | draft: `yes` | final: `no`
+  - feedback: The short answer 'yes' is incorrect because while Ajuga is a genus, Cypress is not a genus but rather a common name for conifers in the family Cupressaceae, which includes multiple genera. | fix: Change the short answer to 'no'.
+  - feedback: The explanation incorrectly states that 'Cypress' refers to a genus, while it actually refers to a common name for multiple genera within the Cupressaceae family. | fix: Clarify that 'Cypress' is a common name for conifers in the Cupressaceae family, not a specific genus.
+
+## M3 correct->wrong (18)
+
+- **5a7625e8554299109176e66a** (bridge) Q: In which year was the King who made the 1925 Birthday Honours born?
+  - gold: `1865` | draft: `1865` | final: `King George V was born in 1865.`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer is correct, but it does not explicitly connect to the question about the year the King who made the 1925 Birthday Honours was born, which could lead to confusion. | fix: Clarify that the answer directly addresses the question about the year of birth.
+  - feedback: The explanation correctly states the birth year of King George V, but it lacks a direct connection to the question about the 1925 Birthday Honours, which could be clearer. | fix: Include a statement that explicitly links King George V's birth year to his role in the 1925 Birthday Honours.
+- **5a774e9c55429972597f14f3** (bridge) Q: David Huntsinger has worked with this gospel singer born in the month of July?
+  - gold: `Larnelle Harris` | draft: `Larnelle Harris` | final: `Larnelle Harris is the gospel singer David Huntsinger has worked with who was born on July 6, 1947.`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer is correct, but it does not explicitly state that Larnelle Harris is the gospel singer David Huntsinger has worked with who was born in July, which is the specific question asked. | fix: Clarify that Larnelle Harris is the gospel singer David Huntsinger has worked with who was born in July.
+  - feedback: The explanation mentions that David Huntsinger has worked with many artists, including Larnelle Harris, but it does not provide specific context or details about their collaboration, which would strengthen the answer. | fix: Include details about the nature of David Huntsinger's work with Larnelle Harris.
+- **5a77724455429972597f153e** (bridge) Q: What race track in the midwest hosts a 500 mile race eavery May?
+  - gold: `Indianapolis Motor Speedway` | draft: `Indianapolis Motor Speedway` | final: `The Indianapolis Motor Speedway hosts the Indianapolis 500, a 500-mile race held every May.`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer correctly identifies the Indianapolis Motor Speedway, but it does not explicitly mention that it hosts a 500-mile race every May, which is the specific requirement of the question. | fix: Clarify that the Indianapolis Motor Speedway hosts the Indianapolis 500, a 500-mile race held every May.
+  - feedback: The explanation correctly states that the Indianapolis 500 is a 500-mile race held annually in May, but it could be more explicit in connecting this information directly to the question asked. | fix: Emphasize that the Indianapolis 500 is the race referred to in the question.
+- **5a7a455c5542994f819ef1a7** (comparison) Q: Who died first, George Archainbaud or Ralph Murphy?
+  - gold: `George Archainbaud` | draft: `George Archainbaud` | final: `Ralph Murphy`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is incorrect; it states George Archainbaud died first, but the question asks who died first, which should be Ralph Murphy. | fix: Change the short answer to Ralph Murphy.
+  - feedback: The explanation correctly states the birth and death dates of both individuals, but it fails to clarify that the question is about who died first, which is Ralph Murphy, not George Archainbaud. | fix: Clarify that the question is about who died first and state that Ralph Murphy died later.
+- **5a80840f554299485f59863b** (bridge) Q: What WB supernatrual drama series was Jawbreaker star Rose Mcgowan best known for being in?
+  - gold: `Charmed` | draft: `Charmed` | final: `Charmed, a supernatural drama series,`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer is correct, but it lacks specificity regarding the context of Rose McGowan's role in 'Charmed', which is important for clarity. | fix: Include that she played Paige Matthews in 'Charmed'.
+  - feedback: The explanation correctly identifies Rose McGowan's role in 'Charmed', but it could provide more context about the series itself, such as its premise or significance, to enhance understanding. | fix: Add a brief description of 'Charmed' as a supernatural drama series.
+- **5a8361b65542992ef85e22a0** (bridge) Q: Vince Phillips held a junior welterweight title by an organization recognized by what larger Hall of Fame?
+  - gold: `International Boxing Hall of Fame` | draft: `International Boxing Hall of Fame` | final: `International Boxing Federation (IBF)`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is incorrect; Vince Phillips held a title recognized by the International Boxing Federation (IBF), not the International Boxing Hall of Fame (IBHOF). | fix: Change the short answer to 'International Boxing Federation (IBF)'.
+  - feedback: The explanation incorrectly states that the IBF is recognized by the IBHOF, which is not the question being asked; the question asks about the larger Hall of Fame associated with the title held by Vince Phillips, not the | fix: Clarify that the IBF is the organization that sanctioned the title held by Vince Phillips.
+- **5a8704f8554299211dda2ba4** (bridge) Q: What is the name of the Isles who were led by Aonghus Mór and covered a total land area of over 8300 km2?
+  - gold: `Kingdom of the Isles` | draft: `Kingdom of the Isles` | final: `Kingdom of the Isles, led by Aonghus Mór`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The draft answer does not explicitly connect Aonghus Mór to the specific name of the Isles that he led, which is necessary to fully answer the question. | fix: Clarify that Aonghus Mór led the Kingdom of the Isles.
+  - feedback: The explanation mentions Aonghus Mór as a leading figure but does not clarify that he was specifically associated with the Kingdom of the Isles, which is crucial for understanding his role. | fix: Include a statement that Aonghus Mór was the leader of the Kingdom of the Isles.
+- **5a87c13f5542996e4f30890c** (bridge) Q: In what city did the "Prince of tenors" star in a film based on an opera by Giacomo Puccini?
+  - gold: `Rome` | draft: `Rome` | final: `The city is not specified in the context for the film 'La bohème'.`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer 'Rome' is incorrect because the question specifically asks for the city where the 'Prince of tenors' starred in a film based on an opera by Giacomo Puccini, which is 'La bohème', not 'Tosca'. | fix: Change the short answer to reflect the correct city related to 'La bohème', which is not provided in the context.
+  - feedback: The explanation incorrectly states that Franco Corelli starred in the film 'Tosca', which is not relevant to the question about the film based on 'La bohème'. | fix: Remove the reference to 'Tosca' and provide information about 'La bohème' instead.
+- **5a87d8215542994775f60800** (bridge) Q: This American crime film set in South Los Angeles was written and directed by the same director and writer of screenwriter of "Street Kings", "End of Watch", "Sabotage", "Fury" and what other film? 
+  - gold: `Suicide Squad` | draft: `Suicide Squad` | final: `Harsh Times`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer 'Suicide Squad' is correct, but it does not address the question of what other film was written and directed by David Ayer alongside the listed films. | fix: Add 'Harsh Times' as the other film.
+  - feedback: The explanation includes 'Training Day' as a film written by David Ayer, which is not relevant to the question since it asks for films he directed and wrote, not just written. | fix: Remove 'Training Day' from the explanation.
+- **5a887bc0554299206df2b2b6** (bridge) Q: The Argentine PGA Championship record holder has won how many tournaments worldwide?
+  - gold: `230` | draft: `230` | final: `Roberto De Vicenzo won more than 230 tournaments worldwide in his career.`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer states '230', which is correct according to the context, but it does not specify that this number refers to tournaments won worldwide, which is the question asked. | fix: Clarify that the 230 tournaments refer to worldwide victories.
+  - feedback: The explanation correctly states that De Vicenzo won more than 230 tournaments worldwide, but it does not provide a direct connection to the question about the number of tournaments won worldwide, making it less clear. | fix: Include a statement that directly answers the question by confirming that he won 230 tournaments worldwide.
+- **5a8f4c8d554299458435d5a3** (bridge) Q: Scott Parkin has been a vocal critic of Exxonmobil and another corporation that has operations in how many countries ?
+  - gold: `more than 70 countries` | draft: `more than 70 countries` | final: `more than 100 countries`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer states 'more than 70 countries', which is correct for Halliburton but does not directly answer the question about the number of countries ExxonMobil operates in. | fix: Provide the specific number of countries ExxonMobil operates in, if available.
+  - feedback: The explanation mentions Halliburton's operations but does not provide any information about ExxonMobil's operations, which is necessary to answer the question. | fix: Include information about the number of countries ExxonMobil operates in.
+- **5ab659e355429954757d324e** (bridge) Q: hree Men on a Horse is a play by a playwright born in which year ?
+  - gold: `1887` | draft: `1887` | final: `George Abbott, one of the playwrights of Three Men on a Horse, was born in 1887.`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer is correct, but it does not specify that George Abbott is one of the playwrights of 'Three Men on a Horse', which is essential for clarity. | fix: Include that George Abbott is one of the playwrights of 'Three Men on a Horse' in the short answer.
+  - feedback: The explanation correctly identifies George Abbott's birth year but fails to mention that he co-wrote the play with John Cecil Holm, which is important context. | fix: Add that George Abbott co-wrote 'Three Men on a Horse' with John Cecil Holm.
+- **5aba749055429901930fa7d8** (comparison) Q: What occupation do Chris Menges and Aram Avakian share?
+  - gold: `director` | draft: `director` | final: `film directors`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer is correct, but it could be more specific by stating that both are film directors, rather than just 'director'. | fix: Specify that both are 'film directors'.
+  - feedback: The explanation correctly identifies both individuals as film directors, but it could benefit from a clearer connection to the question by explicitly stating that they share the occupation of film directing at the beginn | fix: Start the explanation by stating that both Chris Menges and Aram Avakian share the occupation of film directors.
+- **5abfb3425542990832d3a1c0** (bridge) Q: Andrew Jaspan was the co-founder of what not-for-profit media outlet?
+  - gold: `The Conversation` | draft: `The Conversation` | final: `The Conversation is an independent not-for-profit media outlet.`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer is correct, but it lacks context about the nature of the media outlet, which is important for a complete answer. | fix: Include that 'The Conversation' is an independent not-for-profit media outlet.
+- **5adccd795542990d50227d2c** (bridge) Q: In which city is the ambassador of the Rabat-Salé-Kénitra administrative region to China based?
+  - gold: `Beijing` | draft: `Beijing` | final: `Rabat`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer 'Beijing' does not answer the question about the city where the ambassador of the Rabat-Salé-Kénitra administrative region to China is based, as it implies the ambassador is from Beijing rather than Raba | fix: Change the short answer to 'Rabat'.
+  - feedback: The explanation incorrectly states that the Moroccan ambassador in Beijing represents the Government in Rabat to China, which does not directly address the question about the ambassador of the Rabat-Salé-Kénitra administ | fix: Clarify that the ambassador of the Rabat-Salé-Kénitra administrative region is based in Rabat.
+- **5add11935542994734353827** (comparison) Q: Were the bands Skin Yard and Ostava from the U.S.?
+  - gold: `no` | draft: `no` | final: `No, Skin Yard is an American band from Seattle, Washington, while Ostava is an alternative rock band from Bulgaria.`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer 'no' is correct, but it lacks clarity as it does not explicitly state that Skin Yard is from the U.S. and Ostava is not, which is essential for a complete answer. | fix: Expand the short answer to clarify that Skin Yard is from the U.S. and Ostava is from Bulgaria.
+  - feedback: The explanation correctly identifies Skin Yard as an American band, but it does not explicitly state that Ostava is not from the U.S., which is necessary to fully answer the question. | fix: Add a statement in the explanation that Ostava is from Bulgaria, reinforcing that it is not a U.S. band.
+- **5ae224da554299234fd043ee** (comparison) Q: Do the drinks Gibson and Zurracapote both contain gin?
+  - gold: `no` | draft: `no` | final: `Only the Gibson contains gin.`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer 'no' is correct, but it does not explicitly state that only the Gibson contains gin, which is necessary for clarity. | fix: Change the short answer to 'Only the Gibson contains gin.'
+  - feedback: The explanation correctly states that the Gibson is made with gin, but it could clarify that Zurracapote does not contain gin, which is implied but not explicitly stated. | fix: Add a statement that emphasizes Zurracapote does not contain gin.
+- **5ae738f75542991bbc9761c4** (bridge) Q: What year was the brother of this first round draft pick by the Washington Redskins drafted?
+  - gold: `2003` | draft: `2003` | final: `1999`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is incorrect; Boss Bailey was drafted in 2003, but the question asks for the year his brother Champ Bailey was drafted, which is 1999. | fix: Change the short answer to 1999.
+  - feedback: The explanation incorrectly states that the question is about Boss Bailey's draft year instead of Champ Bailey's. It should clarify that the question pertains to the year Champ Bailey was drafted, which is 1999. | fix: Revise the explanation to focus on Champ Bailey's draft year.
+
+## M3 error (19)
+
+- **5a7320565542991f9a20c61d** (bridge) Q: who is younger Keith Bostic or Jerry Glanville ?
+  - gold: `Keith Bostic` | draft: `Keith Bostic` | final: ``
+  - error: An edit must name one changed field exactly once.
+- **5a77cb335542997042120b3a** (bridge) Q: What American professional Hawaiian surfer born 18 October 1992 won the Rip Curl Pro Portugal?
+  - gold: `John John Florence` | draft: `John John Florence` | final: ``
+  - error: Every changed field requires an edit provenance record.
+- **5a7a230e5542996a35c170ee** (bridge) Q: What year was the film that starred the composer for "The Naked Brothers Band"?
+  - gold: `2014` | draft: `2008` | final: ``
+  - error: An edit must name one changed field exactly once.
+- **5a7b12a355429927d897bf2a** (bridge) Q: When was the palace founded at which Columba de Dunbar died in 1435?
+  - gold: `the late 12th Century` | draft: `late 12th Century` | final: ``
+  - error: Every changed field requires an edit provenance record.
+- **5a835478554299123d8c20ed** (bridge) Q: How many copies of Roald Dahl's variation on a popular anecdote sold?
+  - gold: `250 million` | draft: `no` | final: ``
+  - error: An edit must name one changed field exactly once.
+- **5a85eed75542996432c5713b** (bridge) Q: Where did the descendants of the group of black Indians associated with the Seminole people settle?
+  - gold: `Coahuila, Mexico` | draft: `Coahuila, Mexico` | final: ``
+  - error: Every changed field requires an edit provenance record.
+- **5a8979f4554299669944a52e** (bridge) Q: What is the middle name of the actress who plays Bobbi Bacha in Suburban Madness?
+  - gold: `Ann` | draft: `Ann` | final: ``
+  - error: Every changed field requires an edit provenance record.
+- **5a8a43eb5542996c9b8d5e82** (bridge) Q: Which Australian city founded in 1838 contains a boarding school opened by a Prime Minister of Australia and named after a school in London of the same name.
+  - gold: `Marion, South Australia` | draft: `Marion` | final: ``
+  - error: An edit must name one changed field exactly once.
+- **5a8e0a005542995085b373a1** (bridge) Q: Bordan Tkachuk was the CEO of a company that provides what sort of products?
+  - gold: `IT products and services` | draft: `IT products and services` | final: ``
+  - error: Every changed field requires an edit provenance record.
+- **5a8e1027554299653c1aa15f** (bridge) Q: Which year and which conference was the 14th season for this conference as part of the NCAA Division that the Colorado Buffaloes played in with a record of 2-6 in conference play?
+  - gold: `2009 Big 12 Conference` | draft: `2009, Big 12 Conference` | final: ``
+  - error: An edit must name one changed field exactly once.
+- **5ab2a186554299295394677b** (bridge) Q: When did the English local newspaper, featuring the sculpture and war memorial in the Forbury gardens, change names?
+  - gold: `2009` | draft: `2009` | final: ``
+  - error: Every changed field requires an edit provenance record.
+- **5ab5ed505542997d4ad1f255** (bridge) Q: Who is Bruce Spizer an expert on, known as the most influential act of the rock era?
+  - gold: `The Beatles` | draft: `The Beatles` | final: ``
+  - error: Every changed field requires an edit provenance record.
+- **5abd01205542992ac4f3819b** (bridge) Q: Mummulgum is a stop on the Bruxner Highway before reaching the town on the banks of which river?
+  - gold: `Richmond` | draft: `Richmond River` | final: ``
+  - error: An edit must name one changed field exactly once.
+- **5ac1c6805542994ab5c67e11** (bridge) Q: For what type of work is the production company for The Year Without a Santa Claus best known?
+  - gold: `seasonal television specials, particularly its work in stop motion animation` | draft: `seasonal television specials` | final: ``
+  - error: Every changed field requires an edit provenance record.
+- **5ae005b555429942ec259bec** (bridge) Q: In what year was the novel that Lourenço Mutarelli based "Nina" on based first published?
+  - gold: `1866` | draft: `1866` | final: ``
+  - error: An edit must name one changed field exactly once.
+- **5ae2b770554299495565db0f** (bridge) Q: In what month is the annual documentary film festival, that is presented by the fortnightly published British journal of literary essays, held? 
+  - gold: `March and April` | draft: `March and April` | final: ``
+  - error: Every changed field requires an edit provenance record.
+- **5ae37c765542992f92d822d4** (bridge) Q: What was the name of the 1996 loose adaptation of William Shakespeare's "Romeo & Juliet" written by James Gunn?
+  - gold: `Tromeo and Juliet` | draft: `Tromeo and Juliet` | final: ``
+  - error: Every changed field requires an edit provenance record.
+- **5ae73c065542991e8301cc18** (bridge) Q: Which Eminem album included vocals from a singer who had an album titled "Unapologetic"?
+  - gold: `"The Marshall Mathers LP 2"` | draft: `The Marshall Mathers LP 2` | final: ``
+  - error: Every changed field requires an edit provenance record.
+- **5ae7eaf65542994a481bbe1d** (bridge) Q: When was the  former Indian cricketer who made his ODI debuts during the 2000 ICC KnockOut Trophy born? 
+  - gold: `7 October 1978` | draft: `7 October 1978` | final: ``
+  - error: Every changed field requires an edit provenance record.
+
+## M3 wrong->correct (3)
+
+- **5a80071f5542992bc0c4a684** (bridge) Q: Alice David is the voice of Lara Croft in a video game developed by which company ?
+  - gold: `Crystal Dynamics` | draft: `Square Enix` | final: `Crystal Dynamics`
+  - feedback: The short answer is incorrect because it does not specify the correct developer of the game in question, which is Crystal Dynamics, not Square Enix. | fix: Change the short answer to 'Crystal Dynamics'.
+- **5adc53f75542996e6852530a** (comparison) Q: Are both Cypress and Ajuga genera?
+  - gold: `no` | draft: `yes` | final: `no`
+  - feedback: The short answer 'yes' is incorrect because while Ajuga is a genus, Cypress is not a genus but rather a common name for conifers in the family Cupressaceae, which includes multiple genera. | fix: Change the short answer to 'no'.
+  - feedback: The explanation incorrectly states that both terms refer to distinct genera; it fails to clarify that 'Cypress' is a common name for multiple genera rather than a single genus. | fix: Clarify that 'Cypress' refers to a group of genera within the Cupressaceae family.
+- **5ae305df5542992decbdcdc3** (bridge) Q: At what venue was the January 2, 2012 game featured the University of Louisville team?
+  - gold: `Mercedes-Benz Superdome` | draft: `Papa John's Cardinal Stadium` | final: `Mercedes-Benz Superdome`
+  - feedback: The short answer is incorrect because the question specifically asks for the venue of a game on January 2, 2012, while the draft answer refers to the home stadium of the team without mentioning any specific game or date. | fix: Specify that the game on January 2, 2012, was the Sugar Bowl, which took place at the Mercedes-Benz Superdome.
+  - feedback: The explanation does not address the specific game on January 2, 2012, and instead provides general information about the team's home games, which is not relevant to the question. | fix: Include details about the Sugar Bowl game on January 2, 2012, and its venue.

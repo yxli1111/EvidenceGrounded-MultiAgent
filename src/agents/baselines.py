@@ -22,7 +22,8 @@ from dataclasses import dataclass
 from contracts.interfaces import LLMClient, VerificationPort
 from contracts.schemas import AnswerDraft, QAInput, RevisionResult, VerificationFeedback
 
-from .answer import (STAGE_SELF_CHECK, STAGE_SELF_REVISE, AgentConfig, call_and_parse,
+from .answer import (STAGE_SELF_CHECK, STAGE_SELF_REVISE, AgentConfig, as_draft, as_qa_input,
+                     call_and_parse,
                      load_prompt, parse_answer_payload, parse_issues_payload,
                      render_context)
 from .independent_critic import independent_critique, issues_to_feedback
@@ -37,6 +38,7 @@ def self_check_feedback_id(draft: AnswerDraft) -> str:
 def self_check(example: QAInput, draft: AnswerDraft, llm: LLMClient,
                config: AgentConfig) -> VerificationFeedback:
     """M2 step 1: the Answer Agent reviews its own draft (feedback only)."""
+    example, draft = as_qa_input(example), as_draft(draft)
     prompt = load_prompt('baselines.self_check')
     messages = prompt.render(question=example.question.strip(),
                              context=render_context(example.context),
@@ -64,6 +66,7 @@ def format_review(feedback: VerificationFeedback) -> str:
 def self_revise(example: QAInput, draft: AnswerDraft, feedback: VerificationFeedback,
                 llm: LLMClient, config: AgentConfig) -> RevisionResult:
     """M2 step 2: exactly one self-revision conditioned on the self-check."""
+    example, draft = as_qa_input(example), as_draft(draft)
     prompt = load_prompt('baselines.self_revise')
     messages = prompt.render(question=example.question.strip(),
                              context=render_context(example.context),
@@ -106,11 +109,13 @@ class BaselineOutput:
 
 def run_m1(example: QAInput, draft: AnswerDraft) -> BaselineOutput:
     """M1: no LLM call beyond the shared draft."""
+    example, draft = as_qa_input(example), as_draft(draft)
     return BaselineOutput('M1', draft, None, None)
 
 
 def run_m2(example: QAInput, draft: AnswerDraft, llm: LLMClient,
            config: AgentConfig) -> BaselineOutput:
+    example, draft = as_qa_input(example), as_draft(draft)
     feedback = self_check(example, draft, llm, config)
     final = self_revise(example, draft, feedback, llm, config)
     return BaselineOutput('M2', draft, feedback, final)
@@ -119,6 +124,7 @@ def run_m2(example: QAInput, draft: AnswerDraft, llm: LLMClient,
 def run_m3(example: QAInput, draft: AnswerDraft, llm: LLMClient, config: AgentConfig,
            revision: VerificationPort) -> BaselineOutput:
     """M3: A's critic feedback, then D's shared ``revise_answer`` exactly once."""
+    example, draft = as_qa_input(example), as_draft(draft)
     feedback = independent_critique(example, draft, llm, config)
     final = revision.revise_answer(example, draft, feedback, llm)
     if not isinstance(final, RevisionResult):

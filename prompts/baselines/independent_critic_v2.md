@@ -13,6 +13,8 @@ Critically review the draft answer below. Look for:
 Report only real factual or reasoning problems that you can point to in the context.
 Do not report wording, style, length, or extra detail that does not change whether the answer is correct.
 The short answer is supposed to be a minimal span (entity, date, number, short phrase, or "yes"/"no"); that format is not a problem.
+Before saying the context lacks some information, check every titled paragraph: the answer usually needs facts from two paragraphs.
+Never suggest replacing the answer with "unknown" or "not specified".
 
 Output format (JSON object, no markdown fences, no extra keys):
 {"issues": [{"rationale": "<what is wrong and why>", "suggested_correction": "<fix, or null>"}],

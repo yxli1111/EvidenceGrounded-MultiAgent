@@ -16,7 +16,7 @@ from __future__ import annotations
 from contracts.interfaces import LLMClient
 from contracts.schemas import AnswerDraft, FeedbackItem, QAInput, VerificationFeedback
 
-from .answer import (STAGE_CRITIC, AgentConfig, call_and_parse, load_prompt,
+from .answer import (STAGE_CRITIC, AgentConfig, as_draft, as_qa_input, call_and_parse, load_prompt,
                      parse_issues_payload, render_context)
 
 
@@ -38,6 +38,7 @@ def issues_to_feedback(feedback_id: str, draft: AnswerDraft,
 def independent_critique(example: QAInput, draft: AnswerDraft, llm: LLMClient,
                          config: AgentConfig) -> VerificationFeedback:
     """One critic call (+ optional format repair). Returns feedback only, never a revision."""
+    example, draft = as_qa_input(example), as_draft(draft)
     prompt = load_prompt('baselines.independent_critic')
     messages = prompt.render(question=example.question.strip(),
                              context=render_context(example.context),

@@ -83,10 +83,26 @@ class TestPromptsAndRendering(unittest.TestCase):
             question='q', context='c', short_answer='x', explanation='e', review='r')[1]['content']
         self.assertIn('NEVER a sentence', revise)
         self.assertIn('copy it exactly', revise)
+        self.assertIn('Never replace a specific answer', revise)
         for pid in ('baselines.self_check', 'baselines.independent_critic'):
             text = A.load_prompt(pid).render(question='q', context='c', short_answer='x',
                                              explanation='e')[1]['content']
             self.assertIn('ONLY the replacement answer span', text)
+
+    def test_prompt_set_switch(self):
+        import subprocess, sys
+        code = ('import sys; sys.path.insert(0, "."); from src.agents import answer as A; '
+                'print(A.PROMPT_SET, A.PROMPT_VERSIONS["baselines.self_revise"], A.PROMPT_VERSIONS["answer.draft"])')
+        root = str(A.PROMPTS_DIR.parent)
+        for env_val, expect in (('v1', 'self_revise_v1@3138997ca0'), ('', 'self_revise_v2@')):
+            env = dict(__import__('os').environ, A_PROMPT_SET=env_val)
+            out = subprocess.run([sys.executable, '-c', code], cwd=root, env=env,
+                                 capture_output=True, text=True, check=True).stdout
+            self.assertIn(expect, out)
+            self.assertIn('draft_v1@1dd344355e', out)            # shared draft prompt identical
+        env = dict(__import__('os').environ, A_PROMPT_SET='v9')
+        bad = subprocess.run([sys.executable, '-c', code], cwd=root, env=env, capture_output=True, text=True)
+        self.assertNotEqual(bad.returncode, 0)
 
     def test_v1_prompt_files_kept_for_provenance(self):
         for rel in ('baselines/self_check_v1.md', 'baselines/self_revise_v1.md',
@@ -284,6 +300,16 @@ class TestIntegrationAdapters(unittest.TestCase):
         self.assertEqual(agent.self_reflect(BRIDGE_EXAMPLE, d_obj, l1),
                          agent.self_reflect(self.b_style_dict(), cached, l2))
         self.assertEqual(l1.calls[0].messages, l2.calls[0].messages)
+
+    def test_module_level_functions_accept_dicts(self):
+        cached = dataclasses.asdict(shared_draft())
+        llm = MockLLMClient({A.STAGE_SELF_CHECK: CRITIC_JSON, A.STAGE_SELF_REVISE: REVISED_JSON,
+                             A.STAGE_CRITIC: CRITIC_JSON})
+        out2 = B.run_m2(self.b_style_dict(), cached, llm, CFG)        # E's adapter calls this directly
+        self.assertEqual(out2.final.final_answer, 'Gothenburg')
+        out3 = B.run_m3(self.b_style_dict(), cached, llm, CFG, MockRevisionPort())
+        self.assertIsInstance(out3.draft, AnswerDraft)
+        self.assertEqual(B.run_m1(self.b_style_dict(), cached).final_answer, 'Stockholm')
 
     def test_bad_types_rejected(self):
         with self.assertRaises(TypeError):
