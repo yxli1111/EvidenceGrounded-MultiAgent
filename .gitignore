@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local experiment logs
+/logs/
+
+# Local LLM cache
+/cache/

@@ -1,0 +1,20 @@
+{
+  "dataset": "HotpotQA",
+  "split": "validation",
+  "purpose": "Development claim-count statistics",
+  "model": "openai/gpt-4o-mini",
+  "temperature": 0,
+  "summary": {
+    "total": 50,
+    "success": 50,
+    "failed": 0,
+    "mean": 3.96,
+    "median": 4.0,
+    "p90": 6,
+    "max": 9
+  },
+  "observed_llm_calls": 50,
+  "observed_cost_usd": 0.00513615,
+  "source_csv": "dev_claim_counts.csv",
+  "note": "Development statistics, not held-out evaluation results."
+}
