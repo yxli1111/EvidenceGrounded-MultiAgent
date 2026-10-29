@@ -1,0 +1,153 @@
+# A: M2/M3 case list (PRELIMINARY pilot)
+
+## M2 correct->wrong (14)
+
+- **5a7320565542991f9a20c61d** (bridge) Q: who is younger Keith Bostic or Jerry Glanville ?
+  - gold: `Keith Bostic` | draft: `Keith Bostic` | final: `Jerry Glanville`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is incorrect; it should indicate that Jerry Glanville is older than Keith Bostic, not the other way around. | fix: Jerry Glanville
+- **5a774e9c55429972597f14f3** (bridge) Q: David Huntsinger has worked with this gospel singer born in the month of July?
+  - gold: `Larnelle Harris` | draft: `Larnelle Harris` | final: `Larnelle Harris (born July 6, 1947)`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer is correct, but it does not directly answer the question about the gospel singer born in July that David Huntsinger has worked with; it should specify that Larnelle Harris is the singer in question. | fix: Larnelle Harris (born July 6, 1947)
+- **5a7a455c5542994f819ef1a7** (comparison) Q: Who died first, George Archainbaud or Ralph Murphy?
+  - gold: `George Archainbaud` | draft: `George Archainbaud` | final: `Ralph Murphy`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is incorrect because it states George Archainbaud, but the question asks who died first, which should be Ralph Murphy since he died later than Archainbaud. | fix: Ralph Murphy
+  - feedback: The explanation incorrectly states that George Archainbaud died first without clarifying that the question is about who died first, which is Ralph Murphy. | fix: Ralph Murphy was born later, on May 1, 1895, and died on February 10, 1967. Therefore, Ralph Murphy died after George Archainbaud.
+- **5a7b12a355429927d897bf2a** (bridge) Q: When was the palace founded at which Columba de Dunbar died in 1435?
+  - gold: `the late 12th Century` | draft: `late 12th Century` | final: `12th Century`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer 'late 12th Century' is not a specific date and does not directly answer the question about when the palace was founded; it should provide a more precise timeframe. | fix: 12th Century
+  - feedback: The explanation states that Spynie Palace served as the fortified seat of the Bishops of Moray for about 500 years, which is not directly relevant to the question of when it was founded. | fix: The founding of Spynie Palace dates back to the late 12th Century.
+- **5a8361b65542992ef85e22a0** (bridge) Q: Vince Phillips held a junior welterweight title by an organization recognized by what larger Hall of Fame?
+  - gold: `International Boxing Hall of Fame` | draft: `International Boxing Hall of Fame` | final: `International Boxing Federation`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is incorrect because it states 'International Boxing Hall of Fame' instead of the correct organization, which is the 'International Boxing Federation' (IBF). The question asks for the larger Hall of Fame | fix: International Boxing Federation
+- **5a87c13f5542996e4f30890c** (bridge) Q: In what city did the "Prince of tenors" star in a film based on an opera by Giacomo Puccini?
+  - gold: `Rome` | draft: `Rome` | final: `not specified`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer 'Rome' is incorrect because the question specifically asks for the city where the 'Prince of tenors' starred in a film based on an opera by Giacomo Puccini, which is 'Tosca', and the context states that 
+- **5a887bc0554299206df2b2b6** (bridge) Q: The Argentine PGA Championship record holder has won how many tournaments worldwide?
+  - gold: `230` | draft: `230` | final: `more than 230`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer '230' is correct, but it does not specify that it refers to the number of tournaments won worldwide by Roberto De Vicenzo, which is necessary for clarity. | fix: more than 230
+  - feedback: The explanation states that De Vicenzo is recognized as the record holder for the Argentine PGA Championship with 16 victories, but it does not clarify that this is separate from the total number of tournaments won world | fix: Roberto De Vicenzo won more than 230 tournaments worldwide in his career, including 16 victories in the Argentine PGA Championship.
+- **5a8979f4554299669944a52e** (bridge) Q: What is the middle name of the actress who plays Bobbi Bacha in Suburban Madness?
+  - gold: `Ann` | draft: `Ann` | final: `Sela Ann`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer 'Ann' is correct as it is Sela Ward's middle name, but it does not specify that it is her middle name, which is necessary for clarity in answering the question. | fix: Sela Ann
+  - feedback: The explanation states that Sela Ward plays Bobbi Bacha, which is correct, but it does not explicitly mention that 'Ann' is her middle name, which is essential to directly answer the question. | fix: Sela Ward's full name is Sela Ann Ward, where 'Ann' is her middle name.
+- **5a8e1027554299653c1aa15f** (bridge) Q: Which year and which conference was the 14th season for this conference as part of the NCAA Division that the Colorado Buffaloes played in with a record of 2-6 in conference play?
+  - gold: `2009 Big 12 Conference` | draft: `2009, Big 12 Conference` | final: `2009, Pac-12 Conference`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer incorrectly states the conference as 'Big 12 Conference' when the question specifically asks for the conference related to the Colorado Buffaloes' 2-6 record, which is the Pac-12 Conference for the 2016- | fix: Pac-12 Conference
+- **5ab84bf555429916710eb01f** (bridge) Q: In 1991 Euromarché was bought by a chain that operated how any hypermarkets at the end of 2016?
+  - gold: `1,462` | draft: `1,462` | final: `Carrefour`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer does not address the question about how many hypermarkets were operated by the chain that bought Euromarché, which is Carrefour, but instead provides a number related to Carrefour itself without context  | fix: Carrefour
+  - feedback: The explanation incorrectly implies that the number of hypermarkets operated by Carrefour is the answer to the question, rather than clarifying that Carrefour is the chain that bought Euromarché. | fix: Carrefour is the chain that bought Euromarché in 1991.
+- **5ac2d1d755429921a00ab053** (comparison) Q: Who had the best singles ranking, Roberta Vinci or Jorge Lozano?
+  - gold: `Roberta Vinci` | draft: `Roberta Vinci` | final: `Roberta Vinci had the best singles ranking`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer is correct, but it does not explicitly state that Roberta Vinci had the best singles ranking compared to Jorge Lozano, which is necessary for clarity. | fix: Roberta Vinci had the best singles ranking.
+  - feedback: The explanation correctly states Vinci's highest singles ranking but does not explicitly mention that Lozano's highest singles ranking was World No. 51, which is necessary for a complete comparison. | fix: Jorge Lozano's highest singles ranking was World No. 51.
+- **5adccd795542990d50227d2c** (bridge) Q: In which city is the ambassador of the Rabat-Salé-Kénitra administrative region to China based?
+  - gold: `Beijing` | draft: `Beijing` | final: `Rabat`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer 'Beijing' does not answer the question about the city where the ambassador of the Rabat-Salé-Kénitra administrative region to China is based, as it is not specified in the context that the ambassador is  | fix: Rabat
+- **5ae2b770554299495565db0f** (bridge) Q: In what month is the annual documentary film festival, that is presented by the fortnightly published British journal of literary essays, held? 
+  - gold: `March and April` | draft: `March and April` | final: `March`
+  - reason: content: answer replaced by a different answer
+  - feedback: The question specifically asks for the month in which the festival is held, but the short answer provides two months instead of a single month. | fix: March
+- **5ae73c065542991e8301cc18** (bridge) Q: Which Eminem album included vocals from a singer who had an album titled "Unapologetic"?
+  - gold: `"The Marshall Mathers LP 2"` | draft: `The Marshall Mathers LP 2` | final: `Numb`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is incorrect because 'The Marshall Mathers LP 2' does not include vocals from a singer who had an album titled 'Unapologetic'; it is 'Numb' from Rihanna that features Eminem, and 'Unapologetic' is her al | fix: The Marshall Mathers LP 2
+  - feedback: The explanation incorrectly states that 'The Marshall Mathers LP 2' includes vocals from Rihanna, which is not relevant to the question about which Eminem album includes vocals from a singer with an album titled 'Unapolo | fix: Eminem's album that includes vocals from Rihanna is 'The Marshall Mathers LP 2', and Rihanna had an album titled 'Unapologetic'.
+
+## M2 wrong->correct (2)
+
+- **5a80071f5542992bc0c4a684** (bridge) Q: Alice David is the voice of Lara Croft in a video game developed by which company ?
+  - gold: `Crystal Dynamics` | draft: `Square Enix` | final: `Crystal Dynamics`
+  - feedback: The short answer 'Square Enix' is incorrect because it does not specify the developer of the game, which is Crystal Dynamics, while Square Enix is the publisher. | fix: Crystal Dynamics
+- **5adc53f75542996e6852530a** (comparison) Q: Are both Cypress and Ajuga genera?
+  - gold: `no` | draft: `yes` | final: `no`
+  - feedback: The short answer 'yes' is incorrect because while Cypress is a genus, Ajuga is not; it is a genus of flowering plants in a different family. | fix: no
+
+## M3 correct->wrong (13)
+
+- **5a774e9c55429972597f14f3** (bridge) Q: David Huntsinger has worked with this gospel singer born in the month of July?
+  - gold: `Larnelle Harris` | draft: `Larnelle Harris` | final: `yes`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is correct, but it does not directly answer the question about whether David Huntsinger has worked with a gospel singer born in July; it only provides the name of one such singer without confirming the c | fix: yes
+- **5a7a455c5542994f819ef1a7** (comparison) Q: Who died first, George Archainbaud or Ralph Murphy?
+  - gold: `George Archainbaud` | draft: `George Archainbaud` | final: `Ralph Murphy`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is incorrect because it should identify the person who died first, not George Archainbaud himself. | fix: Ralph Murphy
+- **5a7b12a355429927d897bf2a** (bridge) Q: When was the palace founded at which Columba de Dunbar died in 1435?
+  - gold: `the late 12th Century` | draft: `late 12th Century` | final: `1180`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is incorrect because it does not specify a date, which is required by the question. The context states that Columba de Dunbar died at Spynie Palace, which was founded in the late 12th Century, but the an | fix: late 12th century
+- **5a8361b65542992ef85e22a0** (bridge) Q: Vince Phillips held a junior welterweight title by an organization recognized by what larger Hall of Fame?
+  - gold: `International Boxing Hall of Fame` | draft: `International Boxing Hall of Fame` | final: `International Boxing Federation`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is incorrect because it states 'International Boxing Hall of Fame' instead of the correct organization, which is the 'International Boxing Federation (IBF)'. | fix: International Boxing Federation
+  - feedback: The explanation incorrectly implies that the IBF is recognized by the International Boxing Hall of Fame, while the context states that the IBF is one of the organizations recognized by the Hall of Fame, not the other way | fix: The International Boxing Hall of Fame recognizes the International Boxing Federation (IBF) as one of the four major organizations.
+- **5a87c13f5542996e4f30890c** (bridge) Q: In what city did the "Prince of tenors" star in a film based on an opera by Giacomo Puccini?
+  - gold: `Rome` | draft: `Rome` | final: `Cinecittà`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer 'Rome' is incorrect because the question specifically asks for the city where the 'Prince of tenors' starred in a film based on an opera by Giacomo Puccini, which is 'La bohème', not 'Tosca'.
+  - feedback: The explanation incorrectly states that Franco Corelli starred in the film 'Tosca', while the question pertains to a film based on 'La bohème'. | fix: Franco Corelli starred in the film 'La bohème', which is based on the opera 'La bohème' by Giacomo Puccini.
+- **5a87d8215542994775f60800** (bridge) Q: This American crime film set in South Los Angeles was written and directed by the same director and writer of screenwriter of "Street Kings", "End of Watch", "Sabotage", "Fury" and what other film? 
+  - gold: `Suicide Squad` | draft: `Suicide Squad` | final: `Harsh Times`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is incorrect because the question asks for a film written and directed by the same person as the listed films, and 'Suicide Squad' is not mentioned in the context as being written and directed by David A | fix: Harsh Times
+- **5a887bc0554299206df2b2b6** (bridge) Q: The Argentine PGA Championship record holder has won how many tournaments worldwide?
+  - gold: `230` | draft: `230` | final: `more than 230`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer states '230', which is incorrect as the context specifies 'more than 230 tournaments', indicating that the exact number is not specified and could be higher. | fix: more than 230
+  - feedback: The explanation correctly states that Roberto De Vicenzo won more than 230 tournaments worldwide, but it does not clarify that the exact number is unspecified, which is important for accuracy. | fix: Roberto De Vicenzo won more than 230 tournaments worldwide in his career, but the exact number is not specified.
+- **5a8979f4554299669944a52e** (bridge) Q: What is the middle name of the actress who plays Bobbi Bacha in Suburban Madness?
+  - gold: `Ann` | draft: `Ann` | final: `Sela Ann Ward`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer 'Ann' is correct as it is Sela Ward's middle name, but it does not directly answer the question about the middle name of the actress who plays Bobbi Bacha in Suburban Madness, as it lacks context about h | fix: Sela Ann Ward
+- **5a8f4c8d554299458435d5a3** (bridge) Q: Scott Parkin has been a vocal critic of Exxonmobil and another corporation that has operations in how many countries ?
+  - gold: `more than 70 countries` | draft: `more than 70 countries` | final: `not specified`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer states 'more than 70 countries', which is correct for Halliburton but does not address the question about Exxonmobil's operations. | fix: not specified
+- **5aba749055429901930fa7d8** (comparison) Q: What occupation do Chris Menges and Aram Avakian share?
+  - gold: `director` | draft: `director` | final: `film directors`
+  - reason: format: final contains gold but is longer (sentence / extra words)
+  - feedback: The short answer 'director' is too vague and does not specify that both individuals are film directors, which is the specific occupation they share. | fix: film directors
+- **5ac2ffbd554299677310267b** (bridge) Q: SuperMansion starred the actress who had a recurring role as whom on Workaholics?
+  - gold: `Jillian Belk` | draft: `Jillian Belk` | final: `Jillian Bell`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer is correct, but the explanation does not provide any additional context or reasoning related to the question about SuperMansion, which is necessary to fully answer the question. | fix: Jillian Bell starred in SuperMansion.
+- **5adccd795542990d50227d2c** (bridge) Q: In which city is the ambassador of the Rabat-Salé-Kénitra administrative region to China based?
+  - gold: `Beijing` | draft: `Beijing` | final: `Rabat`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer 'Beijing' is incorrect as the question specifically asks for the city where the ambassador of the Rabat-Salé-Kénitra administrative region to China is based, which is not stated in the context. | fix: Rabat
+- **5ae738f75542991bbc9761c4** (bridge) Q: What year was the brother of this first round draft pick by the Washington Redskins drafted?
+  - gold: `2003` | draft: `2003` | final: `1999`
+  - reason: content: answer replaced by a different answer
+  - feedback: The short answer '2003' is incorrect because it refers to the year Boss Bailey was drafted, not the year Champ Bailey's brother was drafted. | fix: 1999
+
+## M3 wrong->correct (5)
+
+- **5a7a230e5542996a35c170ee** (bridge) Q: What year was the film that starred the composer for "The Naked Brothers Band"?
+  - gold: `2014` | draft: `2008` | final: `2014`
+  - feedback: The short answer '2008' is incorrect because it does not specify the film title or the correct year of the film starring Nat Wolff, which is 'The Fault in Our Stars' (2014). | fix: 2014
+  - feedback: The explanation incorrectly states that 'Operation Mojo' is the film that starred Nat Wolff. The correct film is 'The Fault in Our Stars'. | fix: The film that starred Nat Wolff, who composed for 'The Naked Brothers Band', is 'The Fault in Our Stars', which was released in 2014.
+- **5a7dcc775542990b8f503ab5** (bridge) Q: Which component of shellite has the formula (ON)CHOH?
+  - gold: `picric acid` | draft: `(ON)CHOH` | final: `Picric acid`
+  - feedback: The explanation does not clarify that the question specifically asks for the component of shellite, not just any compound with the formula (ON)CHOH. The answer should directly relate to shellite rather than providing gen | fix: Picric acid is a component of shellite.
+- **5a80071f5542992bc0c4a684** (bridge) Q: Alice David is the voice of Lara Croft in a video game developed by which company ?
+  - gold: `Crystal Dynamics` | draft: `Square Enix` | final: `Crystal Dynamics`
+  - feedback: The short answer incorrectly identifies Square Enix as the developer of the game, while it was actually developed by Crystal Dynamics. | fix: Crystal Dynamics
+- **5adc53f75542996e6852530a** (comparison) Q: Are both Cypress and Ajuga genera?
+  - gold: `no` | draft: `yes` | final: `no`
+  - feedback: The short answer 'yes' is incorrect because while Cypress is a genus, Ajuga is not; it is a genus of flowering plants in a different family. | fix: no
+- **5ae73acb5542991e8301cc07** (bridge) Q: D1NZ is a series based on what oversteering technique?
+  - gold: `Drifting` | draft: `oversteering` | final: `drifting`
+  - feedback: The short answer 'oversteering' is not specific enough to directly answer the question about the oversteering technique that D1NZ is based on; it should specify 'drifting' as the technique. | fix: drifting
