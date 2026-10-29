@@ -280,8 +280,12 @@ class TestExportPerExampleCsv:
         export_per_example_csv(records, gold, output_path=out, preliminary=False)
         with open(out, newline="", encoding="utf-8") as f:
             header = next(csv.reader(f))
-        assert header == ["example_id", "method_id", "status", "em", "f1",
-                          "draft_em", "question_type"]
+        assert header == [
+            "example_id", "method_id", "status", "em", "f1", "draft_em", "question_type",
+            "method_cost_usd", "draft_cost_usd", "n_calls", "latency_s",
+            "n_evidence", "n_claims", "n_supported", "n_unsupported", "n_contradicted",
+            "answer_changed", "explanation_changed", "sf_recall", "error",
+        ]
 
     def test_em_f1_values_correct(self, tmp_path):
         from src.evaluation.answer_metrics import export_per_example_csv

@@ -74,11 +74,32 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Comma-separated method IDs to run, e.g. M3,M4,M5 (default: all).")
     p.add_argument("--split", default="eval", choices=["eval", "dev"],
                    help="'eval' (default): exclude B_dev_50 IDs; 'dev': run only B_dev_50 IDs.")
+    p.add_argument("--min-key-remaining-usd", type=float, default=1.0,
+                   dest="min_key_remaining_usd",
+                   help="Abort if OpenRouter key balance drops below this amount (USD).")
     return p
+
+
+def _print_cumulative_cost(log_path: str = "logs/llm_usage.jsonl") -> None:
+    total, n = 0.0, 0
+    try:
+        with open(log_path, encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    d = json.loads(line)
+                    cost = d.get("cost_usd")
+                    if cost is not None:
+                        total += cost
+                        n += 1
+    except FileNotFoundError:
+        return
+    if n > 0:
+        print(f"[run_experiment] cumul cost: ${total:.4f} USD ({n} calls in {log_path})")
 
 
 def main() -> None:
     args = _build_parser().parse_args()
+    _print_cumulative_cost()
 
     run_name = args.run_name or f"run_{_now_tag()}"
     out_dir = pathlib.Path("results") / "runs" / run_name
@@ -299,7 +320,7 @@ def _run_real(args, records_path, out_dir: pathlib.Path, methods_list):
     budget_guard = BudgetGuard(BudgetConfig(
         max_calls=len(examples_to_run) * 5 * 6,
         max_cost_usd=args.max_cost_usd,
-        min_key_remaining_usd=0.0,
+        min_key_remaining_usd=args.min_key_remaining_usd,
     ))
     llm = OpenRouterLLMClient(api_key=api_key, budget_guard=budget_guard)
 

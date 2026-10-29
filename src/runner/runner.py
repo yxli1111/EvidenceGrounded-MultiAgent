@@ -61,7 +61,20 @@ _FATAL_ERROR_TYPES: frozenset[str] = frozenset({
     "LLMAuthenticationError",
     "LLMInsufficientCreditError",
     "ConfigurationError",
+    "BudgetExceededError",
 })
+
+
+def _is_fatal(exc: BaseException) -> bool:
+    """Return True if exc or any exception in its __cause__/__context__ chain is fatal."""
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if type(current).__name__ in _FATAL_ERROR_TYPES:
+            return True
+        current = current.__cause__ if current.__cause__ is not None else current.__context__
+    return False
 
 
 def _now() -> str:
@@ -336,7 +349,7 @@ class ExperimentRunner:
                     draft_usage = self._drain_usage(effective_llm)
                 except Exception as exc:
                     draft_usage = self._drain_usage(effective_llm)
-                    is_fatal = type(exc).__name__ in _FATAL_ERROR_TYPES
+                    is_fatal = _is_fatal(exc)
                     for mid in method_ids:
                         if (eid, mid) in completed:
                             continue
@@ -394,7 +407,7 @@ class ExperimentRunner:
                     rec.raw_calls_path = raw_calls_path
                     append_record(output_path, rec)
                     example_new.append(rec)
-                    if type(exc).__name__ in _FATAL_ERROR_TYPES:
+                    if _is_fatal(exc):
                         new_records.extend(example_new)
                         raise
                     continue

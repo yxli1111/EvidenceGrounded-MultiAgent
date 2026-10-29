@@ -119,6 +119,74 @@ def _get_draft_pred(rec) -> str:
         return getattr(rec, "short_answer", None) or ""
 
 
+def _feedback_counts(feedback) -> tuple[int, int, int]:
+    if not feedback:
+        return 0, 0, 0
+    items = (feedback.get("items") if isinstance(feedback, dict) else getattr(feedback, "items", [])) or []
+    def _label(i):
+        return i.get("label") if isinstance(i, dict) else getattr(i, "label", None)
+    return (
+        sum(1 for i in items if _label(i) == "SUPPORTED"),
+        sum(1 for i in items if _label(i) == "UNSUPPORTED"),
+        sum(1 for i in items if _label(i) == "CONTRADICTED"),
+    )
+
+
+def _answer_changed(rec) -> str:
+    mid = rec.get("method_id", "") if isinstance(rec, dict) else getattr(rec, "method_id", "")
+    if mid == "M1":
+        return ""
+    status = rec.get("status", "") if isinstance(rec, dict) else getattr(rec, "status", "")
+    if status != "ok":
+        return ""
+    final = (rec.get("final") if isinstance(rec, dict) else getattr(rec, "final", None)) or {}
+    draft = (rec.get("draft") if isinstance(rec, dict) else getattr(rec, "draft", None)) or {}
+    if not final or not draft:
+        return ""
+    fa = final.get("final_answer", "") if isinstance(final, dict) else getattr(final, "final_answer", "")
+    sa = draft.get("short_answer", "") if isinstance(draft, dict) else getattr(draft, "short_answer", "")
+    return "1" if fa != sa else "0"
+
+
+def _explanation_changed(rec) -> str:
+    mid = rec.get("method_id", "") if isinstance(rec, dict) else getattr(rec, "method_id", "")
+    if mid == "M1":
+        return ""
+    status = rec.get("status", "") if isinstance(rec, dict) else getattr(rec, "status", "")
+    if status != "ok":
+        return ""
+    final = (rec.get("final") if isinstance(rec, dict) else getattr(rec, "final", None)) or {}
+    draft = (rec.get("draft") if isinstance(rec, dict) else getattr(rec, "draft", None)) or {}
+    if not final or not draft:
+        return ""
+    fe = final.get("final_explanation", "") if isinstance(final, dict) else getattr(final, "final_explanation", "")
+    de = draft.get("explanation", "") if isinstance(draft, dict) else getattr(draft, "explanation", "")
+    return "1" if fe != de else "0"
+
+
+def _sf_recall(rec, gold_entry) -> str:
+    gold_sfs = _gold_get(gold_entry, "gold_supporting_facts") if gold_entry else None
+    if not gold_sfs:
+        return ""
+    evidence = (rec.get("evidence") if isinstance(rec, dict) else getattr(rec, "evidence", None)) or {}
+    if not isinstance(evidence, dict):
+        return ""
+    retrieved: set[tuple] = set()
+    for ev_list in evidence.values():
+        for ev in (ev_list or []):
+            if isinstance(ev, dict):
+                retrieved.add((ev.get("doc_title", ""), ev.get("sentence_id", -1)))
+            else:
+                retrieved.add((getattr(ev, "doc_title", ""), getattr(ev, "sentence_id", -1)))
+    if not retrieved:
+        return ""
+    n_hit = sum(
+        1 for sf in gold_sfs
+        if isinstance(sf, dict) and (sf.get("title", ""), sf.get("sentence_id", -1)) in retrieved
+    )
+    return f"{n_hit / len(gold_sfs):.4f}"
+
+
 def compute_em_f1_batch(
     records: list[dict],
     gold_lookup: dict[str, dict],
@@ -219,7 +287,10 @@ def export_per_example_csv(
     Returns:
         Absolute path of the written CSV file.
 
-    Columns: example_id, method_id, status, em, f1, draft_em, question_type
+    Columns: example_id, method_id, status, em, f1, draft_em, question_type,
+             method_cost_usd, draft_cost_usd, n_calls, latency_s,
+             n_evidence, n_claims, n_supported, n_unsupported, n_contradicted,
+             answer_changed, explanation_changed, sf_recall, error
     """
     out = pathlib.Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -263,8 +334,12 @@ def export_per_example_csv(
 
     with open(out, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["example_id", "method_id", "status", "em", "f1",
-                          "draft_em", "question_type"])
+        writer.writerow([
+            "example_id", "method_id", "status", "em", "f1", "draft_em", "question_type",
+            "method_cost_usd", "draft_cost_usd", "n_calls", "latency_s",
+            "n_evidence", "n_claims", "n_supported", "n_unsupported", "n_contradicted",
+            "answer_changed", "explanation_changed", "sf_recall", "error",
+        ])
         for rec in deduped:
             eid = rec.get("example_id", "") if isinstance(rec, dict) else getattr(rec, "example_id", "")
             mid = rec.get("method_id", "") if isinstance(rec, dict) else getattr(rec, "method_id", "")
@@ -282,8 +357,28 @@ def export_per_example_csv(
                 f1_val = token_f1(pred, gold_answer)
                 draft_em_val = exact_match(draft_pred, gold_answer)
 
-            writer.writerow([eid, mid, status,
-                              f"{em_val:.4f}", f"{f1_val:.4f}", f"{draft_em_val:.4f}",
-                              qt or ""])
+            usage = (rec.get("usage") if isinstance(rec, dict) else getattr(rec, "usage", None)) or []
+            draft_usage = (rec.get("draft_usage") if isinstance(rec, dict) else getattr(rec, "draft_usage", None)) or []
+            evidence = (rec.get("evidence") if isinstance(rec, dict) else getattr(rec, "evidence", None)) or {}
+            claims = (rec.get("claims") if isinstance(rec, dict) else getattr(rec, "claims", None))
+            feedback = (rec.get("feedback") if isinstance(rec, dict) else getattr(rec, "feedback", None))
+            error_msg = (rec.get("error") if isinstance(rec, dict) else getattr(rec, "error", None)) or ""
+
+            method_cost = sum((u.get("cost_usd") or 0.0) for u in usage if isinstance(u, dict))
+            draft_cost = sum((u.get("cost_usd") or 0.0) for u in draft_usage if isinstance(u, dict))
+            n_calls = len(usage)
+            latency = sum((u.get("latency_seconds") or 0.0) for u in usage if isinstance(u, dict))
+            n_evidence = sum(len(v) for v in evidence.values() if isinstance(v, list)) if isinstance(evidence, dict) else 0
+            n_claims_val = len(claims) if claims else 0
+            n_sup, n_uns, n_con = _feedback_counts(feedback)
+
+            writer.writerow([
+                eid, mid, status,
+                f"{em_val:.4f}", f"{f1_val:.4f}", f"{draft_em_val:.4f}", qt or "",
+                f"{method_cost:.6f}", f"{draft_cost:.6f}", n_calls, f"{latency:.3f}",
+                n_evidence, n_claims_val, n_sup, n_uns, n_con,
+                _answer_changed(rec), _explanation_changed(rec), _sf_recall(rec, gold_entry),
+                error_msg,
+            ])
 
     return str(out.resolve())

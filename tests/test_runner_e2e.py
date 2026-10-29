@@ -865,3 +865,60 @@ class TestDictDraftCoercion:
             assert rec.draft is not None
             assert rec.draft.get("short_answer") == "preserved answer"
             assert rec.draft.get("draft_id") == "dd:001"
+
+
+# ---------------------------------------------------------------------------
+# P17: fatal error chain — BudgetExceededError wrapped in another exception
+# ---------------------------------------------------------------------------
+
+class _BudgetExceededError(RuntimeError):
+    """Simulates BudgetExceededError by name."""
+
+
+class _ClaimExtractionError(RuntimeError):
+    """Simulates a claims-layer error that wraps BudgetExceededError."""
+
+
+# Give them the right __name__ so _FATAL_ERROR_TYPES name-check finds them
+_BudgetExceededError.__name__ = "BudgetExceededError"
+_ClaimExtractionError.__name__ = "ClaimExtractionError"
+
+
+class TestFatalErrorChain:
+    def test_budget_exceeded_wrapped_in_claim_extraction_stops_run(
+        self, ports, output_file
+    ):
+        example1 = make_synthetic_example("e_chain1")
+        example2 = make_synthetic_example("e_chain2")
+
+        class WrappingClaimsPort(MockClaimsPort):
+            def extract_claims(self, draft, llm):
+                raise _ClaimExtractionError("extraction failed") from _BudgetExceededError("budget")
+
+        ports["claims_port"] = WrappingClaimsPort()
+        runner = ExperimentRunner(**ports, top_k=3)
+        with pytest.raises(_ClaimExtractionError):
+            runner.run([example1, example2], output_file)
+
+        records = load_records(output_file)
+        example_ids = {r.example_id for r in records}
+        assert "e_chain1" in example_ids, "First example's records must be written before abort"
+        assert "e_chain2" not in example_ids, "Second example must not be processed after fatal abort"
+
+    def test_direct_budget_exceeded_in_method_stops_run(self, ports, output_file):
+        example1 = make_synthetic_example("e_direct1")
+        example2 = make_synthetic_example("e_direct2")
+
+        class DirectBudgetVerifPort(MockVerificationPort):
+            def verify_claims(self, *args, **kwargs):
+                raise _BudgetExceededError("budget exceeded directly")
+
+        ports["verification_port"] = DirectBudgetVerifPort()
+        runner = ExperimentRunner(**ports, top_k=3)
+        with pytest.raises(_BudgetExceededError):
+            runner.run([example1, example2], output_file)
+
+        records = load_records(output_file)
+        example_ids = {r.example_id for r in records}
+        assert "e_direct1" in example_ids
+        assert "e_direct2" not in example_ids
