@@ -83,12 +83,14 @@ PROMPTS_DIR = Path(__file__).resolve().parents[2] / 'prompts'
 PROMPT_SETS: dict[str, dict[str, str]] = {
     'v1': {
         'answer.draft': 'answer/draft_v1.md',
+        'answer.consistency_check': 'answer/consistency_check_v1.md',  # Phase 2, Experiment A
         'baselines.self_check': 'baselines/self_check_v1.md',
         'baselines.self_revise': 'baselines/self_revise_v1.md',
         'baselines.independent_critic': 'baselines/independent_critic_v1.md',
     },
     'v2': {
         'answer.draft': 'answer/draft_v1.md',
+        'answer.consistency_check': 'answer/consistency_check_v1.md',  # Phase 2, Experiment A
         'baselines.self_check': 'baselines/self_check_v2.md',
         'baselines.self_revise': 'baselines/self_revise_v2.md',
         'baselines.independent_critic': 'baselines/independent_critic_v2.md',
@@ -385,6 +387,12 @@ class AnswerAgent:
         from .baselines import run_m2
         out = run_m2(as_qa_input(example), as_draft(draft), llm, self.config)
         return out.feedback, out.final
+
+    def consistency_check(self, example: QAInput, draft: AnswerDraft, llm: LLMClient):
+        """Phase 2 Experiment A (M1C): answer-explanation consistency check of the shared
+        draft. Returns (feedback, revision or None, decision); only short_answer may change."""
+        from .consistency import check_consistency
+        return check_consistency(as_qa_input(example), as_draft(draft), llm, self.config)
 
     def independent_critique(self, example: QAInput, draft: AnswerDraft,
                              llm: LLMClient) -> VerificationFeedback:

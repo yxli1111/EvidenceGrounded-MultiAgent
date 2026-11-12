@@ -40,6 +40,23 @@ record.prompt_versions.update(agent.prompt_versions)
 
 To keep M2's self-check feedback in `ExperimentRecord.feedback`, E can call `baselines.run_m2(example, draft, llm, config)`. It returns `draft`, `feedback` and `final` together.
 
+## Phase 2: Experiment A, answer-explanation consistency check (M1C)
+
+Research question: can detecting a mismatch between `short_answer` and `explanation` improve final-answer accuracy without introducing harmful revisions?
+
+| File | Purpose |
+| --- | --- |
+| `prompts/answer/consistency_check_v1.md` | checker prompt (question + short answer + explanation only) |
+| `src/agents/consistency.py` | `check_consistency(example, draft, llm, config)` → (feedback, revision or None, decision); deterministic safety gate |
+| `src/agents/answer.py` | `AnswerAgent.consistency_check(...)`, the entry point for E's runner flag; prompt registered as `answer.consistency_check` (existing prompt hashes unchanged) |
+| `research/A_consistency_experiment.py` | runs M1C on any run dir's M1 records (paired, same drafts); C's client, budget cap, resumable |
+| `research/A_consistency_analysis.py` | M1 vs M1C with E's metrics: EM/F1, 5,000-resample paired CI, flips, detection/edit rate, gate outcomes, headroom, cost; `case_table.csv` for the manual precision audit |
+| `tests/agents/test_A_consistency.py`, `test_A_consistency_pipeline.py` | 21 tests (gate rules, no context/gold sent, logging, resume, analysis, review scoring) |
+
+Edit policy (code-enforced): edit `short_answer` only when the checker flags an inconsistency, proposes a different span of 8 words or fewer, the quoted sentence occurs verbatim in the explanation, and the span occurs verbatim inside that quote (yes/no questions: flip yes ↔ no only). The explanation and the original draft are never modified. Every check logs `decision.gate`: consistent / edited / flag_* reasons.
+
+Run order: dev (`results/runs/dev_v2`) → review the case table → freeze `consistency_check_v1` → confirmatory run on E's fresh disjoint evaluation set. main_v2 may be reported only as previously inspected data.
+
 ## Prompt v2 (2026-10-29), driven by the pilot run main_n100 (v1)
 Pilot (n=100, gpt-4o-mini, prompt set v1). Scored with E's functions via `research/A_baselines_analysis.py`:
 - EM M1 0.63 / M2 0.46 / M3 0.34 (errors = 0). Paired bootstrap CIs exclude 0 for M2-M1, M3-M1 and M3-M2.
