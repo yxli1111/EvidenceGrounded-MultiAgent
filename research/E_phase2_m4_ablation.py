@@ -345,7 +345,7 @@ def _pairwise(
 ) -> dict:
     delta, lo, hi = _bootstrap_delta_ci(em_a, em_b)
     return {
-        "comparison": f"{label_b} − {label_a}",
+        "comparison": f"{label_b} - {label_a}",
         "delta_em": delta,
         "ci_lo": lo,
         "ci_hi": hi,
@@ -485,7 +485,7 @@ def main() -> None:
     common_eids = sorted(set.intersection(*eid_sets))
     print(f"  Common examples across all modes: {len(common_eids)}")
     if not common_eids:
-        sys.exit("ERROR: no common examples found — check that runs share the same examples.")
+        sys.exit("ERROR: no common examples found  - check that runs share the same examples.")
 
     # M1 EM baseline (use first run's M1; all runs share the same draft)
     first_mode = mode_runs[0][0]
@@ -527,7 +527,7 @@ def main() -> None:
             la, lb = mode_labels[i], mode_labels[j]
             pw = _pairwise(la, lb, em_by_mode[la], em_by_mode[lb])
             pairwise_rows.append(pw)
-            print(f"  {lb}−{la}: ΔEM={pw['delta_em']:+.3f} [{pw['ci_lo']:.3f},{pw['ci_hi']:.3f}]")
+            print(f"  {lb}-{la}: dEM={pw['delta_em']:+.3f} [{pw['ci_lo']:.3f},{pw['ci_hi']:.3f}]")
 
     # Strip internal _em_vals before serialising
     for r in summary_rows:
@@ -559,9 +559,81 @@ def main() -> None:
     _plot(summary_rows, out_dir / "em_by_mode.png")
 
     print(f"\nOutputs written to {out_dir}/")
-    print(f"  summary.csv / summary.json  — {len(summary_rows)} modes")
-    print(f"  pairwise.csv / pairwise.json — {len(pairwise_rows)} pairs")
+    print(f"  summary.csv / summary.json   - {len(summary_rows)} modes")
+    print(f"  pairwise.csv / pairwise.json  - {len(pairwise_rows)} pairs")
     print(f"  em_by_mode.png")
+
+    # -------------------------------------------------------------------------
+    # Sensitivity analysis: common-success subset
+    # Only example IDs where M4 succeeded in ALL modes (no failure → 0 penalty)
+    # -------------------------------------------------------------------------
+    ok_eids_per_mode: dict[str, set] = {}
+    for mode, _ in mode_runs:
+        ok_eids_per_mode[mode] = {
+            eid for eid in common_eids
+            if (all_records[mode].get((eid, "M4")) or {}).get("status") == "ok"
+        }
+    common_ok_eids: list[str] = sorted(set.intersection(*ok_eids_per_mode.values()))
+    print(f"\n  Common-success subset (M4 ok in ALL modes): {len(common_ok_eids)}")
+
+    summary_ok_rows = []
+    for mode, _ in mode_runs:
+        row = _analyse_mode(
+            mode_label=mode,
+            records=all_records[mode],
+            gold=all_gold[mode],
+            m1_em_by_eid=m1_em_by_eid,
+            common_eids=common_ok_eids,
+        )
+        summary_ok_rows.append(row)
+        print(
+            f"  [ok-subset] {mode:6s} EM={row['em']:.3f}"
+            f" [{row['em_ci_lo']:.3f},{row['em_ci_hi']:.3f}]"
+            f"  ΔEM={row['delta_em_vs_m1']:+.3f}  F1={row['f1']:.3f}"
+        )
+
+    em_by_mode_ok = {r["mode"]: r["_em_vals"] for r in summary_ok_rows}
+    pairwise_ok_rows: list[dict] = []
+    for i in range(len(mode_labels)):
+        for j in range(i + 1, len(mode_labels)):
+            la, lb = mode_labels[i], mode_labels[j]
+            pw = _pairwise(la, lb, em_by_mode_ok[la], em_by_mode_ok[lb])
+            pairwise_ok_rows.append(pw)
+            print(
+                f"  [ok-subset] {lb}-{la}:"
+                f" ΔEM={pw['delta_em']:+.3f} [{pw['ci_lo']:.3f},{pw['ci_hi']:.3f}]"
+            )
+
+    for r in summary_ok_rows:
+        r.pop("_em_vals", None)
+
+    _write_csv(out_dir / "summary_common_success.csv", summary_ok_rows, summary_csv_keys)
+    (out_dir / "summary_common_success.json").write_text(
+        json.dumps(summary_ok_rows, indent=2, ensure_ascii=False, default=str),
+        encoding="utf-8",
+    )
+    _write_csv(out_dir / "pairwise_common_success.csv", pairwise_ok_rows, pairwise_keys)
+    (out_dir / "pairwise_common_success.json").write_text(
+        json.dumps(pairwise_ok_rows, indent=2, ensure_ascii=False, default=str),
+        encoding="utf-8",
+    )
+    print(f"  summary_common_success.csv / .json   - {len(summary_ok_rows)} modes"
+          f" (n={len(common_ok_eids)} examples)")
+    print(f"  pairwise_common_success.csv / .json  - {len(pairwise_ok_rows)} pairs")
+
+    # failures.csv — every M4 failure within common_eids across all modes
+    failure_rows: list[dict] = []
+    for mode, _ in mode_runs:
+        for eid in common_eids:
+            rec = all_records[mode].get((eid, "M4"))
+            if rec and rec.get("status") != "ok":
+                failure_rows.append({
+                    "mode": mode,
+                    "example_id": eid,
+                    "error": (rec.get("error") or "unknown")[:200],
+                })
+    _write_csv(out_dir / "failures.csv", failure_rows, ["mode", "example_id", "error"])
+    print(f"  failures.csv  - {len(failure_rows)} failures across all modes")
 
     # Also add M1 baseline row to summary for reference
     m1_ci = _bootstrap_mean_ci(list(m1_em_by_eid.values()))

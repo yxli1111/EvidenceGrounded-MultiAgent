@@ -1,0 +1,15 @@
+{
+  "preliminary": true,
+  "n_examples": 300,
+  "n_records": 600,
+  "split": "eval",
+  "model": "openai/gpt-4o-mini",
+  "query_include_question": true,
+  "m4_evidence_mode": "top10",
+  "m4_top_k": 5,
+  "m5_top_k_per_claim": 5,
+  "n_dev_excluded": 50,
+  "run_timestamp": "20261113_125034",
+  "reused_drafts_from": "p2_m4_top5_n300",
+  "methods": "M1,M4"
+}

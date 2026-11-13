@@ -1,0 +1,10 @@
+{
+  "mode": "M1_baseline",
+  "n": 300,
+  "n_ok": 300,
+  "n_error": 0,
+  "em": 0.5933333333333334,
+  "em_ci_lo": 0.5366666666666666,
+  "em_ci_hi": 0.65,
+  "note": "M1 baseline (no retrieval, no revision)"
+}

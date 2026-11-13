@@ -1,0 +1,10 @@
+mode,example_id,error
+top5,5a791a97554299148911f9f2,"verify_draft: response is not valid JSON (Expecting ',' delimiter)."
+top5,5ac5199a5542994611c8b38a,"verify_draft: response is not valid JSON (Expecting ',' delimiter)."
+top10,5a8cb288554299585d9e3726,"verify_draft: response is not valid JSON (Expecting ',' delimiter)."
+full,5a75f0ea5542994ccc91866c,"verify_draft: response is not valid JSON (Expecting ',' delimiter)."
+full,5a791a97554299148911f9f2,"verify_draft: response is not valid JSON (Expecting ',' delimiter)."
+full,5a7a8a9c554299042af8f666,"verify_draft: response is not valid JSON (Expecting ',' delimiter)."
+full,5ab96ab755429970cfb8eacd,"verify_draft: response is not valid JSON (Expecting ',' delimiter)."
+full,5adf34d35542993a75d26425,"verify_draft: response is not valid JSON (Expecting ',' delimiter)."
+full,5adf3e355542993a75d26440,"verify_draft: response is not valid JSON (Expecting ',' delimiter)."

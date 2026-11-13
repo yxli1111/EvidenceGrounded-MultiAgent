@@ -1,0 +1,83 @@
+[
+  {
+    "mode": "top5",
+    "n": 300,
+    "n_ok": 298,
+    "n_error": 2,
+    "em": 0.5933333333333334,
+    "em_ci_lo": 0.5366666666666666,
+    "em_ci_hi": 0.6466666666666666,
+    "f1": 0.7091510064010064,
+    "delta_em_vs_m1": 0.0,
+    "delta_em_ci_lo": -0.013333333333333334,
+    "delta_em_ci_hi": 0.013333333333333334,
+    "n_improved": 2,
+    "n_worsened": 1,
+    "n_changed": 7,
+    "avg_n_supported": 0.9228187919463087,
+    "avg_n_unsupported": 0.040268456375838924,
+    "avg_n_contradicted": 0.03691275167785235,
+    "avg_evidence": 5.0,
+    "avg_sf_recall": 0.7730984340044744,
+    "avg_method_cost_usd": 0.00031722785234899364,
+    "avg_draft_cost_usd": 0.0002886105704697982,
+    "avg_latency_s": 4.194039673825568,
+    "error_breakdown": {
+      "verify_draft: response is not valid JSON (Expecting ',' delimiter).": 2
+    }
+  },
+  {
+    "mode": "top10",
+    "n": 300,
+    "n_ok": 299,
+    "n_error": 1,
+    "em": 0.5966666666666667,
+    "em_ci_lo": 0.54,
+    "em_ci_hi": 0.65,
+    "f1": 0.7147065619565619,
+    "delta_em_vs_m1": 0.0033333333333333335,
+    "delta_em_ci_lo": -0.006666666666666667,
+    "delta_em_ci_hi": 0.016666666666666666,
+    "n_improved": 2,
+    "n_worsened": 0,
+    "n_changed": 7,
+    "avg_n_supported": 0.939799331103679,
+    "avg_n_unsupported": 0.020066889632107024,
+    "avg_n_contradicted": 0.04013377926421405,
+    "avg_evidence": 9.979933110367893,
+    "avg_sf_recall": 0.8903567447045705,
+    "avg_method_cost_usd": 0.00045160886287625405,
+    "avg_draft_cost_usd": 0.0002880737458193975,
+    "avg_latency_s": 4.451339871571861,
+    "error_breakdown": {
+      "verify_draft: response is not valid JSON (Expecting ',' delimiter).": 1
+    }
+  },
+  {
+    "mode": "full",
+    "n": 300,
+    "n_ok": 294,
+    "n_error": 6,
+    "em": 0.5866666666666667,
+    "em_ci_lo": 0.53,
+    "em_ci_hi": 0.6433333333333333,
+    "f1": 0.6967407499907499,
+    "delta_em_vs_m1": -0.006666666666666667,
+    "delta_em_ci_lo": -0.02,
+    "delta_em_ci_hi": 0.006666666666666667,
+    "n_improved": 1,
+    "n_worsened": 1,
+    "n_changed": 5,
+    "avg_n_supported": 0.9489795918367347,
+    "avg_n_unsupported": 0.027210884353741496,
+    "avg_n_contradicted": 0.023809523809523808,
+    "avg_evidence": 41.01360544217687,
+    "avg_sf_recall": "1.0 (full context — all gold SFs retrieved by definition)",
+    "avg_method_cost_usd": 0.0008215964285714293,
+    "avg_draft_cost_usd": 0.00028885153061224453,
+    "avg_latency_s": 5.489398369728103,
+    "error_breakdown": {
+      "verify_draft: response is not valid JSON (Expecting ',' delimiter).": 6
+    }
+  }
+]
