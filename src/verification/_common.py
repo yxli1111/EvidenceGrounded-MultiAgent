@@ -94,23 +94,45 @@ def generate_json(llm, stage: str, payload: dict, error) -> dict:
     config = settings()
     folder = "revision" if stage == "revise_answer" else "verification"
     prompt = (_ROOT / "prompts" / folder / f"{stage}.txt").read_text(encoding="utf-8")
-    response = llm.generate(
-        stage=stage,
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": json.dumps(payload, ensure_ascii=False, allow_nan=False)},
-        ],
-        model=config.model,
-        temperature=config.temperature,
-        max_tokens=(config.revision_max_tokens if stage == "revise_answer" else config.verification_max_tokens),
-    )
-    # Transport retries and usage/raw-response logging belong to C's client.
-    # Do not turn client failures into empty feedback or silently try a second revision.
+    messages = [
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": json.dumps(payload, ensure_ascii=False, allow_nan=False)},
+    ]
+    call_args = {
+        "stage": stage,
+        "model": config.model,
+        "temperature": config.temperature,
+        "max_tokens": (config.revision_max_tokens if stage == "revise_answer"
+                       else config.verification_max_tokens),
+    }
+    # Transport retries and usage/raw-response logging belong to the LLM client.
+    # Only verify_draft may request one syntax-only JSON repair; never retry
+    # API failures, semantic/schema errors, citations, or revisions here.
+    response = llm.generate(messages=messages, **call_args)
     raw = text(response.text, "LLMResponse.text", error)
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise error(f"{stage}: response is not valid JSON ({exc.msg}).") from exc
+        if stage != "verify_draft":
+            raise error(f"{stage}: response is not valid JSON ({exc.msg}).") from exc
+        repair_messages = [
+            {"role": "system", "content": (
+                "Repair only JSON syntax in the supplied verifier output. "
+                "Return exactly one valid JSON object, with no Markdown. "
+                "Preserve all verdicts, target IDs, rationales, citation IDs, "
+                "suggested corrections, and overall comment exactly. "
+                "Do not re-verify, invent facts, or add citations."
+            )},
+            {"role": "user", "content": raw},
+        ]
+        repaired = llm.generate(messages=repair_messages, **call_args)
+        repair_raw = text(repaired.text, "LLMResponse.text", error)
+        try:
+            parsed = json.loads(repair_raw)
+        except json.JSONDecodeError as repair_exc:
+            raise error(
+                f"{stage}: JSON syntax repair failed ({repair_exc.msg})."
+            ) from repair_exc
     if not isinstance(parsed, dict):
         raise error(f"{stage}: response must be a JSON object.")
     return parsed
