@@ -123,6 +123,8 @@ def main(argv=None, *, llm=None) -> int:
     p.add_argument('--max-tokens', type=int, default=300)
     p.add_argument('--limit', type=int, default=None)
     p.add_argument('--exclude-ids-file', type=Path, default=None, help='JSON list of example ids to skip')
+    p.add_argument('--exclude-run', type=Path, action='append', default=[],
+                   help='skip every example id that appears in this run dir (repeatable), e.g. results/runs/main_v2')
     p.add_argument('--max-cost-usd', type=float, default=0.50)
     p.add_argument('--max-calls', type=int, default=None)
     p.add_argument('--min-key-remaining-usd', type=float, default=1.0)
@@ -131,6 +133,9 @@ def main(argv=None, *, llm=None) -> int:
     a = p.parse_args(argv)
 
     exclude = set(json.loads(a.exclude_ids_file.read_text(encoding='utf-8'))) if a.exclude_ids_file else set()
+    for run_dir in a.exclude_run:
+        with (run_dir / 'records.jsonl').open(encoding='utf-8') as fh:
+            exclude |= {json.loads(l)['example_id'] for l in fh if l.strip()}
     rows = load_source(a.source_run, a.limit, exclude)
     if not rows:
         print(f'no M1 records found in {a.source_run}')
@@ -144,6 +149,7 @@ def main(argv=None, *, llm=None) -> int:
     meta = {'experiment': 'Phase 2 Experiment A: answer-explanation consistency check (M1C)',
             'method_id': METHOD_ID, 'source_run': str(a.source_run), 'n_examples': len(rows),
             'example_ids': [r['example_id'] for r in rows], 'agent_config': config.as_log_dict(),
+            'excluded_runs': [str(x) for x in a.exclude_run], 'n_excluded_ids': len(exclude),
             'prompt_versions': dict(PROMPT_VERSIONS), 'edit_policy': 'short_answer only; explanation and draft preserved; '
             'edit only if proposal is copied verbatim from a quoted explanation sentence',
             'gold_used_in_prompts': False,

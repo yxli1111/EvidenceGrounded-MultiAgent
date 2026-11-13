@@ -27,8 +27,8 @@ OK_DRAFT = AnswerDraft('ex-ok:draft', 'Rome', 'The event took place in Rome, Ita
 QUOTE = 'In 2014, the city had 276,170 inhabitants.'
 
 
-def reply(consistent, proposed=None, quote=None, rationale='r'):
-    return j({'consistent': consistent, 'rationale': rationale,
+def reply(consistent, proposed=None, quote=None, rationale='r', mtype=None):
+    return j({'consistent': consistent, 'mismatch_type': mtype, 'rationale': rationale,
               'proposed_short_answer': proposed, 'explanation_quote': quote})
 
 
@@ -38,10 +38,18 @@ def run(example, draft, text):
 
 
 class TestPrompt(unittest.TestCase):
-    def test_prompt_registered_in_both_sets_and_versioned(self):
-        for pset in A.PROMPT_SETS.values():
-            self.assertEqual(pset['answer.consistency_check'], 'answer/consistency_check_v1.md')
-        self.assertRegex(A.PROMPT_VERSIONS['answer.consistency_check'], r'^consistency_check_v1@[0-9a-f]{10}$')
+    def test_prompt_registered_and_v2_by_default(self):
+        self.assertEqual(A.PROMPT_FILES['answer.consistency_check'], 'answer/consistency_check_v2.md')
+        self.assertRegex(A.PROMPT_VERSIONS['answer.consistency_check'], r'^consistency_check_v2@[0-9a-f]{10}$')
+        self.assertTrue((A.PROMPTS_DIR / 'answer' / 'consistency_check_v1.md').exists())   # kept for the dev v1 run
+
+    def test_v1_selectable_by_env_for_reproduction(self):
+        import os, subprocess, sys
+        code = ('import sys; sys.path.insert(0, "."); from src.agents import answer as A; '
+                'print(A.PROMPT_VERSIONS["answer.consistency_check"])')
+        out = subprocess.run([sys.executable, '-c', code], cwd=str(A.PROMPTS_DIR.parent), capture_output=True,
+                             text=True, env=dict(os.environ, A_CONSISTENCY_PROMPT='v1'), check=True).stdout
+        self.assertIn('consistency_check_v1@45cbd00fba', out)
 
     def test_existing_prompt_versions_unchanged(self):
         self.assertEqual(A.PROMPT_VERSIONS['answer.draft'], 'draft_v1@1dd344355e')
@@ -130,6 +138,26 @@ class TestGate(unittest.TestCase):
         self.assertEqual(run(YN, YN_DRAFT, reply(False, 'no', 'Ajuga is not a genus.'))[2].gate,
                          K.GATE_QUOTE_NOT_FOUND)
 
+    def test_v2_mismatch_type_recorded_and_validated(self):
+        _, rev, dec, _ = run(STRAS, STRAS_DRAFT, reply(False, '276,170 inhabitants', QUOTE,
+                                                      mtype='stopped_at_intermediate_step'))
+        self.assertTrue(dec.edited)
+        self.assertEqual(dec.mismatch_type, 'stopped_at_intermediate_step')
+        _, rev, dec, _ = run(STRAS, STRAS_DRAFT, reply(False, '276,170 inhabitants', QUOTE, mtype='other'))
+        self.assertEqual(dec.gate, K.GATE_BAD_TYPE)
+        self.assertIsNone(rev)
+
+    def test_yes_no_reversed_type_requires_yes_no_answers(self):
+        _, rev, dec, _ = run(STRAS, STRAS_DRAFT, reply(False, '276,170 inhabitants', QUOTE, mtype='yes_no_reversed'))
+        self.assertEqual(dec.gate, K.GATE_YESNO_INVALID)
+        _, rev, dec, _ = run(YN, YN_DRAFT, reply(False, 'no', 'Ajuga is a genus of flowering plants.',
+                                                 mtype='different_final_answer'))
+        self.assertEqual(dec.gate, K.GATE_YESNO_INVALID)
+
+    def test_consistent_reply_has_no_mismatch_type(self):
+        _, _, dec, _ = run(OK, OK_DRAFT, reply(True, mtype='different_final_answer'))
+        self.assertIsNone(dec.mismatch_type)
+
     def test_string_booleans_and_null_strings(self):
         _, rev, dec, _ = run(OK, OK_DRAFT, j({'consistent': 'true', 'rationale': 'ok',
                                               'proposed_short_answer': 'null', 'explanation_quote': 'none'}))
@@ -144,7 +172,7 @@ class TestGate(unittest.TestCase):
     def test_decision_is_json_serialisable_and_complete(self):
         _, _, dec, _ = run(STRAS, STRAS_DRAFT, reply(False, '276,170 inhabitants', QUOTE))
         d = json.loads(json.dumps(dec.to_dict()))
-        self.assertEqual(set(d), {'flagged', 'edited', 'gate', 'rationale', 'proposed_short_answer',
+        self.assertEqual(set(d), {'flagged', 'mismatch_type', 'edited', 'gate', 'rationale', 'proposed_short_answer',
                                   'explanation_quote', 'original_short_answer', 'final_short_answer'})
 
 

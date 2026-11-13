@@ -111,6 +111,19 @@ class TestPipeline(unittest.TestCase):
         self.assertFalse(meta['gold_used_in_prompts'])
         self.assertIn('answer.consistency_check', meta['prompt_versions'])
 
+    def test_exclude_run_skips_previously_used_ids(self):
+        other = self.t / 'other_run'
+        other.mkdir()
+        (other / 'records.jsonl').write_text(json.dumps({'example_id': 'e1', 'method_id': 'M1'}) + '\n' +
+                                             json.dumps({'example_id': 'e2', 'method_id': 'M2'}) + '\n')
+        llm = MockLLMClient({K.STAGE_CONSISTENCY: checker, K.STAGE_CONSISTENCY + '.repair': ['x']})
+        quiet(EXP.main, ['--source-run', str(self.src), '--run-name', 'fresh', '--results-root', str(self.runs),
+                         '--exclude-run', str(other)], llm=llm)
+        recs = [json.loads(l)['example_id'] for l in (self.runs / 'fresh' / 'records.jsonl').read_text().splitlines()]
+        self.assertEqual(recs, ['e3', 'e4'])
+        meta = json.loads((self.runs / 'fresh' / 'metadata.json').read_text())
+        self.assertEqual(meta['n_excluded_ids'], 2)
+
     def test_resume_skips_ok_examples(self):
         self._run(MockLLMClient({K.STAGE_CONSISTENCY: checker, K.STAGE_CONSISTENCY + '.repair': ['x']}))
         llm2 = MockLLMClient({K.STAGE_CONSISTENCY: checker, K.STAGE_CONSISTENCY + '.repair': ['x']})

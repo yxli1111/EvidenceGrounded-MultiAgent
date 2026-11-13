@@ -83,14 +83,14 @@ PROMPTS_DIR = Path(__file__).resolve().parents[2] / 'prompts'
 PROMPT_SETS: dict[str, dict[str, str]] = {
     'v1': {
         'answer.draft': 'answer/draft_v1.md',
-        'answer.consistency_check': 'answer/consistency_check_v1.md',  # Phase 2, Experiment A
+        'answer.consistency_check': 'answer/consistency_check_v2.md',  # Phase 2, Experiment A
         'baselines.self_check': 'baselines/self_check_v1.md',
         'baselines.self_revise': 'baselines/self_revise_v1.md',
         'baselines.independent_critic': 'baselines/independent_critic_v1.md',
     },
     'v2': {
         'answer.draft': 'answer/draft_v1.md',
-        'answer.consistency_check': 'answer/consistency_check_v1.md',  # Phase 2, Experiment A
+        'answer.consistency_check': 'answer/consistency_check_v2.md',  # Phase 2, Experiment A
         'baselines.self_check': 'baselines/self_check_v2.md',
         'baselines.self_revise': 'baselines/self_revise_v2.md',
         'baselines.independent_critic': 'baselines/independent_critic_v2.md',
@@ -103,6 +103,11 @@ PROMPT_SET = os.environ.get('A_PROMPT_SET', DEFAULT_PROMPT_SET).strip() or DEFAU
 if PROMPT_SET not in PROMPT_SETS:
     raise ValueError(f'A_PROMPT_SET must be one of {sorted(PROMPT_SETS)}, got {PROMPT_SET!r}')
 PROMPT_FILES: dict[str, str] = dict(PROMPT_SETS[PROMPT_SET])
+# Phase 2 Experiment A checker version: v2 (default; dev-tuned) or v1 (first dev run), for reproduction.
+CONSISTENCY_PROMPT = os.environ.get('A_CONSISTENCY_PROMPT', 'v2').strip() or 'v2'
+if CONSISTENCY_PROMPT not in ('v1', 'v2'):
+    raise ValueError(f'A_CONSISTENCY_PROMPT must be v1 or v2, got {CONSISTENCY_PROMPT!r}')
+PROMPT_FILES['answer.consistency_check'] = f'answer/consistency_check_{CONSISTENCY_PROMPT}.md'
 
 _SECTION_RE = re.compile(r'^### (SYSTEM|USER)\s*$', re.MULTILINE)
 

@@ -78,6 +78,7 @@ def analyse(source_run: Path, run_dir: Path, out_dir: Path, reviewed: Path | Non
                'm1_em': em1, 'm1c_em': em2, 'm1_f1': _r(f11), 'm1c_f1': _r(f12),
                'flagged': int(bool(dec.get('flagged'))), 'edited': int(bool(dec.get('edited'))),
                'gate': dec.get('gate') or ('error' if not ok else ''),
+               'mismatch_type': dec.get('mismatch_type') or '',
                'transition': ('correct' if em1 else 'wrong') + '->' + ('correct' if em2 else 'wrong') if ok
                else ('correct' if em1 else 'wrong') + '->error',
                'headroom_gold_in_explanation': int(headroom),
@@ -91,7 +92,7 @@ def analyse(source_run: Path, run_dir: Path, out_dir: Path, reviewed: Path | Non
                           'draft_answer': d_ans, 'final_answer': f_ans, 'flagged': row['flagged'],
                           'edited': row['edited'], 'gate': row['gate'], 'transition': row['transition'],
                           'headroom_gold_in_explanation': int(headroom),
-                          'checker_rationale': dec.get('rationale'),
+                          'mismatch_type': dec.get('mismatch_type'), 'checker_rationale': dec.get('rationale'),
                           'proposed_short_answer': dec.get('proposed_short_answer'),
                           'explanation_quote': dec.get('explanation_quote'), 'explanation': expl,
                           **{k: '' for k in REVIEW_COLS}})
@@ -117,6 +118,7 @@ def analyse(source_run: Path, run_dir: Path, out_dir: Path, reviewed: Path | Non
         'paired_bootstrap_M1C_minus_M1': {'em': boot('em'), 'f1': boot('f1')},
         'detection_rate': mean([r['flagged'] for r in rows]), 'edit_rate': mean([r['edited'] for r in rows]),
         'gate_outcomes': dict(collections.Counter(r['gate'] for r in rows)),
+        'mismatch_types_flagged': dict(collections.Counter(r['mismatch_type'] for r in rows if r['flagged'])),
         'transitions': dict(collections.Counter(r['transition'] for r in rows)),
         'flag_and_edit_rate_by_draft_correctness': by_draft,
         'headroom': {'wrong_drafts_with_gold_in_explanation': len(hr),

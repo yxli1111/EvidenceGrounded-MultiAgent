@@ -45,12 +45,17 @@ GATE_TOO_LONG = 'flag_too_long'           # proposal is not a short span
 GATE_QUOTE_NOT_FOUND = 'flag_quote_not_in_explanation'
 GATE_SPAN_NOT_IN_QUOTE = 'flag_span_not_in_quote'
 GATE_YESNO_INVALID = 'flag_yesno_invalid'
+GATE_BAD_TYPE = 'flag_unknown_mismatch_type'
+
+# checker v2 must name one of these; v1 output has no type (None is accepted for it)
+MISMATCH_TYPES = ('different_final_answer', 'stopped_at_intermediate_step', 'yes_no_reversed')
 
 
 @dataclass
 class ConsistencyDecision:
     """Everything needed to audit one check (stored with the record)."""
     flagged: bool                 # checker said inconsistent
+    mismatch_type: str | None     # v2: one of MISMATCH_TYPES; v1: None
     edited: bool                  # gate passed and short_answer was changed
     gate: str                     # one of the GATE_* codes
     rationale: str
@@ -110,23 +115,26 @@ def _opt_text(value: Any) -> str | None:
     return None if not t or t.lower() in {'null', 'none', 'n/a'} else t
 
 
-def parse_consistency_payload(obj: dict[str, Any]) -> tuple[bool, str, str | None, str | None]:
+def parse_consistency_payload(obj: dict[str, Any]) -> tuple[bool, str, str | None, str | None, str | None]:
     if 'consistent' not in obj:
         raise ValueError('missing "consistent"')
     consistent = _as_bool(obj['consistent'])
     rationale = _as_text(obj.get('rationale', ''))
     proposed = _opt_text(obj.get('proposed_short_answer'))
     quote = _opt_text(obj.get('explanation_quote'))
-    return consistent, rationale, proposed, quote
+    mtype = _opt_text(obj.get('mismatch_type'))
+    return consistent, rationale, proposed, quote, mtype
 
 
 # --------------------------------------------------------------------------- gate
 
 def apply_gate(draft: AnswerDraft, consistent: bool, proposed: str | None,
-               quote: str | None) -> tuple[str, str | None]:
+               quote: str | None, mismatch_type: str | None = None) -> tuple[str, str | None]:
     """Return (gate_code, new_short_answer or None). Pure function, no LLM."""
     if consistent:
         return GATE_CONSISTENT, None
+    if mismatch_type is not None and mismatch_type not in MISMATCH_TYPES:
+        return GATE_BAD_TYPE, None
     if not proposed:
         return GATE_NO_PROPOSAL, None
     proposed = proposed.strip().strip('"').strip()
@@ -135,8 +143,10 @@ def apply_gate(draft: AnswerDraft, consistent: bool, proposed: str | None,
     expl = _surface(draft.explanation)
     if not quote or _strip_edges(quote) not in expl:
         return GATE_QUOTE_NOT_FOUND, None
-    if _is_yes_no(draft.short_answer) or _is_yes_no(proposed):
-        if not (_is_yes_no(draft.short_answer) and _is_yes_no(proposed)):
+    yn = _is_yes_no(draft.short_answer) or _is_yes_no(proposed)
+    if yn or mismatch_type == 'yes_no_reversed':
+        if not (_is_yes_no(draft.short_answer) and _is_yes_no(proposed)) or \
+                mismatch_type not in (None, 'yes_no_reversed'):
             return GATE_YESNO_INVALID, None
         return GATE_EDITED, _answer_key(proposed)
     if len(proposed.split()) > MAX_PROPOSAL_WORDS:
@@ -169,13 +179,14 @@ def check_consistency(example: QAInput, draft: AnswerDraft, llm: LLMClient,
     messages = prompt.render(question=example.question.strip(),
                              short_answer=draft.short_answer,
                              explanation=draft.explanation or '(empty)')
-    consistent, rationale, proposed, quote = call_and_parse(
+    consistent, rationale, proposed, quote, mtype = call_and_parse(
         llm, stage=STAGE_CONSISTENCY, messages=messages, config=config,
         parser=parse_consistency_payload)
-    gate, new_answer = apply_gate(draft, consistent, proposed, quote)
+    gate, new_answer = apply_gate(draft, consistent, proposed, quote, mtype)
     edited = gate == GATE_EDITED
     decision = ConsistencyDecision(
-        flagged=not consistent, edited=edited, gate=gate, rationale=rationale,
+        flagged=not consistent, mismatch_type=None if consistent else mtype, edited=edited,
+        gate=gate, rationale=rationale,
         proposed_short_answer=proposed, explanation_quote=quote,
         original_short_answer=draft.short_answer,
         final_short_answer=new_answer if edited else draft.short_answer)
