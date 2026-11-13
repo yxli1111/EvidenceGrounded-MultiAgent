@@ -1,0 +1,10 @@
+{
+  "_note": "Unit prices in USD per 1,000 tokens. Real runs use OpenRouter — fetch current prices from https://openrouter.ai/models before a real run and add an entry here. Zeros are safe placeholders for offline/mock testing.",
+  "_source": "Replace with values from openrouter.ai/models. Do NOT commit actual API keys or billing data.",
+  "models": {
+    "mock-model-v1": {
+      "input_per_1k_tokens": 0.0,
+      "output_per_1k_tokens": 0.0
+    }
+  }
+}

@@ -1,0 +1,37 @@
+﻿example_id,method,flip,question,draft_answer,final_answer,gold_answer
+5a7320565542991f9a20c61d,M2,right_to_wrong,who is younger Keith Bostic or Jerry Glanville ?,Keith Bostic,Jerry Glanville,Keith Bostic
+5a774e9c55429972597f14f3,M2,right_to_wrong,David Huntsinger has worked with this gospel singer born in the month of July?,Larnelle Harris,"Larnelle Harris (born July 6, 1947)",Larnelle Harris
+5a7a455c5542994f819ef1a7,M2,right_to_wrong,"Who died first, George Archainbaud or Ralph Murphy?",George Archainbaud,Ralph Murphy,George Archainbaud
+5a7b12a355429927d897bf2a,M2,right_to_wrong,When was the palace founded at which Columba de Dunbar died in 1435?,late 12th Century,12th Century,the late 12th Century
+5a80071f5542992bc0c4a684,M2,wrong_to_right,Alice David is the voice of Lara Croft in a video game developed by which company ?,Square Enix,Crystal Dynamics,Crystal Dynamics
+5a8361b65542992ef85e22a0,M2,right_to_wrong,Vince Phillips held a junior welterweight title by an organization recognized by what larger Hall of Fame?,International Boxing Hall of Fame,International Boxing Federation,International Boxing Hall of Fame
+5a87c13f5542996e4f30890c,M2,right_to_wrong,"In what city did the ""Prince of tenors"" star in a film based on an opera by Giacomo Puccini?",Rome,not specified,Rome
+5a887bc0554299206df2b2b6,M2,right_to_wrong,The Argentine PGA Championship record holder has won how many tournaments worldwide?,230,more than 230,230
+5a8979f4554299669944a52e,M2,right_to_wrong,What is the middle name of the actress who plays Bobbi Bacha in Suburban Madness?,Ann,Sela Ann,Ann
+5a8e1027554299653c1aa15f,M2,right_to_wrong,Which year and which conference was the 14th season for this conference as part of the NCAA Division that the Colorado Buffaloes played in with a record of 2-6 in conference play?,"2009, Big 12 Conference","2009, Pac-12 Conference",2009 Big 12 Conference
+5ab84bf555429916710eb01f,M2,right_to_wrong,In 1991 Euromarché was bought by a chain that operated how any hypermarkets at the end of 2016?,"1,462",Carrefour,"1,462"
+5ac2d1d755429921a00ab053,M2,right_to_wrong,"Who had the best singles ranking, Roberta Vinci or Jorge Lozano?",Roberta Vinci,Roberta Vinci had the best singles ranking,Roberta Vinci
+5adc53f75542996e6852530a,M2,wrong_to_right,Are both Cypress and Ajuga genera?,yes,no,no
+5adccd795542990d50227d2c,M2,right_to_wrong,In which city is the ambassador of the Rabat-Salé-Kénitra administrative region to China based?,Beijing,Rabat,Beijing
+5ae2b770554299495565db0f,M2,right_to_wrong,"In what month is the annual documentary film festival, that is presented by the fortnightly published British journal of literary essays, held? ",March and April,March,March and April
+5ae73c065542991e8301cc18,M2,right_to_wrong,"Which Eminem album included vocals from a singer who had an album titled ""Unapologetic""?",The Marshall Mathers LP 2,Numb,"""The Marshall Mathers LP 2"""
+5a774e9c55429972597f14f3,M3,right_to_wrong,David Huntsinger has worked with this gospel singer born in the month of July?,Larnelle Harris,yes,Larnelle Harris
+5a7a230e5542996a35c170ee,M3,wrong_to_right,"What year was the film that starred the composer for ""The Naked Brothers Band""?",2008,2014,2014
+5a7a455c5542994f819ef1a7,M3,right_to_wrong,"Who died first, George Archainbaud or Ralph Murphy?",George Archainbaud,Ralph Murphy,George Archainbaud
+5a7b12a355429927d897bf2a,M3,right_to_wrong,When was the palace founded at which Columba de Dunbar died in 1435?,late 12th Century,1180,the late 12th Century
+5a7dcc775542990b8f503ab5,M3,wrong_to_right,Which component of shellite has the formula (ON)CHOH?,(ON)CHOH,Picric acid,picric acid
+5a80071f5542992bc0c4a684,M3,wrong_to_right,Alice David is the voice of Lara Croft in a video game developed by which company ?,Square Enix,Crystal Dynamics,Crystal Dynamics
+5a8361b65542992ef85e22a0,M3,right_to_wrong,Vince Phillips held a junior welterweight title by an organization recognized by what larger Hall of Fame?,International Boxing Hall of Fame,International Boxing Federation,International Boxing Hall of Fame
+5a87c13f5542996e4f30890c,M3,right_to_wrong,"In what city did the ""Prince of tenors"" star in a film based on an opera by Giacomo Puccini?",Rome,Cinecittà,Rome
+5a87d8215542994775f60800,M3,right_to_wrong,"This American crime film set in South Los Angeles was written and directed by the same director and writer of screenwriter of ""Street Kings"", ""End of Watch"", ""Sabotage"", ""Fury"" and what other film? ",Suicide Squad,Harsh Times,Suicide Squad
+5a887bc0554299206df2b2b6,M3,right_to_wrong,The Argentine PGA Championship record holder has won how many tournaments worldwide?,230,more than 230,230
+5a8979f4554299669944a52e,M3,right_to_wrong,What is the middle name of the actress who plays Bobbi Bacha in Suburban Madness?,Ann,Sela Ann Ward,Ann
+5a8f4c8d554299458435d5a3,M3,right_to_wrong,Scott Parkin has been a vocal critic of Exxonmobil and another corporation that has operations in how many countries ?,more than 70 countries,not specified,more than 70 countries
+5aba749055429901930fa7d8,M3,right_to_wrong,What occupation do Chris Menges and Aram Avakian share?,director,film directors,director
+5ac2ffbd554299677310267b,M3,right_to_wrong,SuperMansion starred the actress who had a recurring role as whom on Workaholics?,Jillian Belk,Jillian Bell,Jillian Belk
+5adc53f75542996e6852530a,M3,wrong_to_right,Are both Cypress and Ajuga genera?,yes,no,no
+5adccd795542990d50227d2c,M3,right_to_wrong,In which city is the ambassador of the Rabat-Salé-Kénitra administrative region to China based?,Beijing,Rabat,Beijing
+5ae738f75542991bbc9761c4,M3,right_to_wrong,What year was the brother of this first round draft pick by the Washington Redskins drafted?,2003,1999,2003
+5ae73acb5542991e8301cc07,M3,wrong_to_right,D1NZ is a series based on what oversteering technique?,oversteering,drifting,Drifting
+5a738d27554299623ed4abf3,M4,right_to_wrong,"Who was born first, Erika Jayne or Marco Da Silva",Erika Jayne,Marco Da Silva,Erika Jayne
+5a77152355429966f1a36c2e,M4,right_to_wrong,What was the Roud Folk Song Index of the nursery rhyme inspiring What Are Little Girls Made Of?,821,19800,821
