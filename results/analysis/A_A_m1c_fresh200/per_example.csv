@@ -1,0 +1,201 @@
+﻿example_id,question_type,status,gold,draft_answer,final_answer,m1_em,m1c_em,m1_f1,m1c_f1,m1cs_em,m1cs_f1,strict_edited,flagged,edited,gate,mismatch_type,transition,headroom_gold_in_explanation,cost_usd,latency_s,input_tokens,output_tokens
+5a88d745554299206df2b378,comparison,ok,director,director,director,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001176,1.83,576,52
+5ae748d1554299572ea547b0,bridge,ok,1901,1901,1901,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001206,1.761,600,51
+5a7a8a9c554299042af8f666,bridge,ok,Argand lamp,yes,yes,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.0001188,1.497,608,46
+5adffe7155429906c02daa9e,bridge,ok,seven,seven,seven,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012435,1.799,605,56
+5ab642845542995eadeeff8e,comparison,ok,yes,yes,yes,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012345,1.868,599,56
+5a906a685542990a9849362e,bridge,ok,Brazil,Brazil,Brazil,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001224,1.759,580,59
+5a7633ad5542992db9473741,comparison,ok,The Seven Days Battles,Seven Days Battles,Seven Days Battles,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011865,1.685,595,49
+5a74ce9655429974ef308c6c,bridge,ok,Lush Ltd.,Lush,Lush,0.0,0.0,0.6667,0.6667,0.0,0.6667,0,0,0,consistent,,wrong->wrong,1,0.00012465,1.854,575,64
+5a713a5a5542994082a3e6a9,bridge,ok,Manchester United,Manchester United F.C.,Manchester United F.C.,0.0,0.0,0.8,0.8,0.0,0.8,0,0,0,consistent,,wrong->wrong,1,0.00011955,2.102,589,52
+5ab341f755429969a97a8114,bridge,ok,1989,1989,1989,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012,1.644,592,52
+5a8325b35542990548d0b18f,bridge,ok,Kathryn Jean Martin,Bronwyn Bishop,Kathy Sullivan,0.0,0.0,0.0,0.0,0.0,0.0,0,1,1,edited,different_final_answer,wrong->wrong,0,0.00012165,1.731,603,52
+5ab9374b554299131ca422c6,bridge,ok,Frank Lowy,Frank Lowy,Frank Lowy,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001239,1.819,594,58
+5ae52c0f5542992663a4f12e,bridge,ok,Las Vegas,Las Vegas,Las Vegas,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011805,1.858,579,52
+5adbfbd555429947ff173893,bridge,ok,Kelly Lee Osbourne,Kelly Osbourne,Kelly Osbourne,0.0,0.0,0.8,0.8,0.0,0.8,0,0,0,consistent,,wrong->wrong,0,0.00011625,1.768,579,49
+5ab7f0015542992aa3b8c88b,bridge,ok,Sean Yseult.,Sean Yseult,Chris Lee is married to,1.0,0.0,1.0,0.0,1.0,1.0,0,1,1,edited,different_final_answer,correct->wrong,0,0.000114,1.465,564,49
+5ac547525542993e66e822a3,bridge,ok,Prescription Drug User Fee Act,$700 million,$700 million,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.0001269,1.934,602,61
+5a7cbf8c554299452d57b9f4,comparison,ok,Dinosaur,Dinosaur,Dinosaur,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001149,1.718,562,51
+5a7ddc5a5542995f4f4022da,bridge,ok,Wichita,Wichita,Wichita,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001173,1.746,586,49
+5a7a1cd85542990783324e65,bridge,ok,United States presidential election of 2016,2020,the 2016 election,0.0,0.0,0.0,0.5,0.0,0.0,0,1,1,edited,different_final_answer,wrong->wrong,0,0.0001191,1.652,586,52
+5ae0a59a55429945ae9593e2,bridge,ok,Roman,Roman Empire,Roman Empire,0.0,0.0,0.6667,0.6667,0.0,0.6667,0,0,0,consistent,,wrong->wrong,1,0.00012255,2.111,601,54
+5a8b987f5542997f31a41d7a,bridge,ok,C. W. Grafton,C. W. Grafton,C. W. Grafton,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012675,1.965,605,60
+5a8739a05542994775f607ab,bridge,ok,"Brooklyn, New York","Brooklyn, New York","Brooklyn, New York",1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001149,2.268,578,47
+5ae67dba55429908198fa5f0,bridge,ok,"48,982","48,982","48,982",1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001179,2.532,582,51
+5a7b3f4d5542992d025e67bb,bridge,ok,Pasek & Paul,Pasek and Paul,Pasek and Paul,0.0,0.0,0.8,0.8,0.0,0.8,0,0,0,consistent,,wrong->wrong,0,0.0001167,1.755,590,47
+5ae2dfd155429928c423951b,bridge,ok,City of Newcastle,City of Newcastle,City of Newcastle,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001227,1.834,586,58
+5ab6ba245542995eadef007f,comparison,ok,yes,yes,yes,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001194,1.84,604,48
+5ab8854555429934fafe6e0c,bridge,ok,drawings,drawings,drawings,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001221,1.762,578,59
+5a8eea4a5542990e94052bb7,bridge,ok,between the 8th and 16th centuries,Old Frisian,between the 8th and 16th centuries,0.0,1.0,0.0,1.0,0.0,0.0,0,1,1,edited,different_final_answer,wrong->correct,1,0.0001248,1.636,608,56
+5a74c85055429916b0164218,bridge,ok,Alistair Grant,no,no,0.0,0.0,0.0,0.0,0.0,0.0,0,1,0,flag_same_answer,yes_no_reversed,wrong->wrong,0,0.0001161,1.821,590,46
+5a88dcf9554299206df2b383,bridge,ok,Scotland,Scotland,Scotland,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011685,1.618,583,49
+5a7625c7554299109176e668,bridge,ok,Comedy Film Nerds,The Drop-In,The Drop-In,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.0001182,2.767,580,52
+5ac0d83a554299294b219038,bridge,ok,Summerlin,Las Vegas,"Summerlin, Nevada",0.0,0.0,0.0,0.6667,0.0,0.0,0,1,1,edited,stopped_at_intermediate_step,wrong->wrong,1,0.00012285,2.032,579,60
+5a790d8f554299029c4b5eec,bridge,ok,George Harrison,George Harrison,George Harrison,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012195,2.064,621,48
+5ab2c5e255429916697740ba,bridge,ok,Canadian professional ice hockey centre,centre,centre,0.0,0.0,0.3333,0.3333,0.0,0.3333,0,0,0,consistent,,wrong->wrong,1,0.0001164,2.26,576,50
+5abcfc365542993a06baf9d6,bridge,ok,1952,1952,1952,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001221,1.676,590,56
+5a8ee6915542990e94052bad,bridge,ok,third,third,third,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012315,1.846,613,52
+5abba4855542993f40c73b68,bridge,ok,Mark Neveldine and Brian Taylor,"Mark Neveldine, Brian Taylor","Mark Neveldine, Brian Taylor",0.0,0.0,0.8889,0.8889,0.0,0.8889,0,0,0,consistent,,wrong->wrong,1,0.0001239,1.757,606,55
+5ae0bae555429906c02dab08,bridge,ok,Hidden America with Jonah Ray,Ralph Garman,Ralph Garman,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.00012165,1.612,591,55
+5ab271fe554299449642c8a6,comparison,ok,no,yes,yes,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.0001263,1.841,590,63
+5a7997a2554299029c4b5f59,bridge,ok,1943,1992,1992,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.00011835,1.707,593,49
+5add673e5542992ae4cec54d,bridge,ok,Oregon Ducks football,Oregon Ducks,Oregon Ducks,0.0,0.0,0.8,0.8,0.0,0.8,0,0,0,consistent,,wrong->wrong,0,0.00012,1.678,596,51
+5ae819ac55429952e35eaa16,bridge,ok,National Broadcasting Company,NBC,NBC,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.0001233,1.762,622,50
+5aba65a055429939ce03dcd2,bridge,ok,North African Arab,Arab,Arab,0.0,0.0,0.5,0.5,0.0,0.5,0,0,0,consistent,,wrong->wrong,1,0.0001197,1.773,570,57
+5a87bada5542994846c1cddc,bridge,ok,Murray Hill,"Murray Hill, New Jersey","Murray Hill, New Jersey",0.0,0.0,0.6667,0.6667,0.0,0.6667,0,0,0,consistent,,wrong->wrong,1,0.00012075,1.869,581,56
+5ae74fc45542997b22f6a6b4,bridge,ok,severe acute respiratory syndrome,severe acute respiratory syndrome,severe acute respiratory syndrome,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001191,1.684,598,49
+5adf65555542992d7e9f9334,bridge,ok,Wendell Berry,Wendell Berry,Wendell Berry,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.000123,1.681,620,50
+5ade69e455429975fa854ec5,bridge,ok,Tinu Suresh Desai,Vikram Bhatt,Vikram Bhatt,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.0001194,2.048,604,48
+5ae057fd55429945ae959328,bridge,ok,"Golden Valley, Minnesota,","Golden Valley, Minnesota","Golden Valley, Minnesota",1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001164,2.188,560,54
+5ab28019554299722f9b4d51,bridge,ok,$10.5 million,$10.5 million,$10.5 million,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011655,2.07,597,45
+5a75f79555429976ec32bcca,bridge,ok,1999 Odisha cyclone,1999 Odisha cyclone,1999 Odisha cyclone,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001272,1.907,596,63
+5adef80b5542993a75d263c4,bridge,ok,Crackle,Crackle,Crackle,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011805,1.923,571,54
+5ae0aaf455429945ae959401,bridge,ok,Salford City Football Club,Salford City,Salford City,0.0,0.0,0.6667,0.6667,0.0,0.6667,0,0,0,consistent,,wrong->wrong,0,0.000117,1.694,576,51
+5ab47d765542991751b4d78f,bridge,ok,architect Michael Graves,Michael Graves,Michael Graves,0.0,0.0,0.8,0.8,0.0,0.8,0,0,0,consistent,,wrong->wrong,1,0.0001131,1.652,570,46
+5a7ed2c655429930675135e5,bridge,ok,multiple awards,multiple awards,multiple awards,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012645,2.162,607,59
+5ac3e0f7554299194317388b,bridge,ok,Kevin Spacey,Kevin Spacey,no mention of any actor,1.0,0.0,1.0,0.0,1.0,1.0,0,1,1,edited,different_final_answer,correct->wrong,0,0.00012555,1.936,593,61
+5a7bae20554299294a54aa96,bridge,ok,Ryan Seacrest,Ryan Seacrest,Ryan Seacrest,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011715,1.79,581,50
+5ab8ee035542991b5579f04b,comparison,ok,yes,yes,yes,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011205,1.706,579,42
+5a7a276d5542996c55b2dd27,bridge,ok,Colonel Charles Hastings Judd,Colonel Charles Hastings Judd,Colonel Charles Hastings Judd,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012225,1.82,575,60
+5a717d4c5542994082a3e854,comparison,ok,Pavel Sergeyevich Alexandrov,Pavel Alexandrov,Semyon Aranovich Gershgorin,0.0,0.0,0.8,0.0,0.0,0.8,0,1,1,edited,different_final_answer,wrong->wrong,0,0.0001269,1.88,582,66
+5ac02e31554299294b218f3f,bridge,ok,Gal Gadot,Gal Gadot,Justice League,1.0,0.0,1.0,0.0,1.0,1.0,0,1,1,edited,different_final_answer,correct->wrong,0,0.00012225,2.148,591,56
+5a79ea435542996c55b2dc9e,bridge,ok,Rear Adm. J. Edward Snyder,J. Edward Snyder,J. Edward Snyder,0.0,0.0,0.75,0.75,0.0,0.75,0,0,0,consistent,,wrong->wrong,0,0.0001185,1.713,582,52
+5ab7e4dc5542995dae37e9df,bridge,ok,Jackson Storm,Jackson Storm,Jackson Storm,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011925,1.752,591,51
+5a834ed95542990548d0b1ca,comparison,ok,712 5th Avenue,712 Fifth Avenue,712 Fifth Avenue,0.0,0.0,0.6667,0.6667,0.0,0.6667,0,0,0,consistent,,wrong->wrong,0,0.0001191,2.073,578,54
+5ab41d855542996a3a969f4b,bridge,ok,right-hand,right-hand,right-hand,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001203,2.025,578,56
+5a7b7ff75542995eb53be93d,comparison,ok,Arthur Ignatius Conan Doyle,Arthur Conan Doyle,Arthur Conan Doyle,0.0,0.0,0.8571,0.8571,0.0,0.8571,0,0,0,consistent,,wrong->wrong,0,0.00011475,1.503,573,48
+5a7d19d85542995ed0d165e8,bridge,ok,"Birmingham, Alabama","Birmingham, Alabama","Birmingham, Alabama",1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012,2.92,576,56
+5ae7ed17554299540e5a56a3,bridge,ok,44,5,5,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.0001185,1.662,574,54
+5ab2659e554299340b5254b2,bridge,ok,the Parthian Empire,Sasanian Empire,Parthian Empire,0.0,1.0,0.5,1.0,0.0,0.5,0,1,1,edited,different_final_answer,wrong->correct,1,0.00011565,1.697,603,42
+5abd2eab5542992ac4f38210,bridge,ok,Erinsborough,Erinsborough,Erinsborough,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001158,1.777,564,52
+5abaf3195542996cc5e49f2c,bridge,ok,Samoa,Samoa,Guernsey,1.0,0.0,1.0,0.0,1.0,1.0,0,1,1,edited,different_final_answer,correct->wrong,0,0.0001182,1.974,576,53
+5a791a97554299148911f9f2,bridge,ok,"Kimberly Couger ""Kimmy"" Schmidt",Kimmy Schmidt,Kimmy Schmidt,0.0,0.0,0.6667,0.6667,0.0,0.6667,0,0,0,consistent,,wrong->wrong,1,0.0001206,1.706,588,54
+5adf58f15542993a75d264d2,bridge,ok,"""The Comic Strip Presents...""",Bottom,Bottom,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.0001203,1.832,582,55
+5adc65e85542996e68525350,comparison,ok,no,no,no,1.0,1.0,1.0,1.0,1.0,1.0,0,1,0,flag_same_answer,yes_no_reversed,correct->correct,0,0.0001086,1.424,564,40
+5a87ab9b5542996e4f3088c2,bridge,ok,nineteenth,19th century,19th century,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.0001269,1.815,618,57
+5a738fe855429908901be2fb,bridge,ok,Awake,Awake,Awake,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001209,1.51,582,56
+5a8c65a1554299585d9e3680,bridge,ok,French Canadians,French Canadians,French Canadians,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001245,1.633,614,54
+5ac2bbd0554299218029db09,bridge,ok,American,American,American,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011415,1.8,565,49
+5adf3e355542993a75d26440,bridge,ok,8 km,8 km,8 km,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001167,1.763,586,48
+5ae82ae555429952e35eaa71,bridge,ok,Rawhide,Rawhide,Rawhide,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012225,2.26,575,60
+5ac289ff5542996366519a02,comparison,ok,Marsilea,Marsilea,Marsilea,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001203,1.717,594,52
+5a7a5b3a5542996c55b2dd71,bridge,ok,Mark Masons' Hall,St James's Palace,St James's Palace,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.0001212,1.738,572,59
+5ab8688b55429934fafe6daa,bridge,ok,Starlite,Starlite,Starlite,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011835,1.586,577,53
+5a7a3a945542996a35c17147,bridge,ok,Hong Kong,Bank of China Tower,Bank of China Tower,0.0,0.0,0.0,0.0,0.0,0.0,0,1,0,flag_same_answer,different_final_answer,wrong->wrong,0,0.00012705,1.46,611,59
+5ab9b29c554299743d22ebae,comparison,ok,Craig v. Boren,"United States v. Paramount Pictures, Inc.","United States v. Paramount Pictures, Inc.",0.0,0.0,0.2222,0.2222,0.0,0.2222,0,0,0,consistent,,wrong->wrong,1,0.0001206,1.708,592,53
+5a8b63fa55429950cd6afcd7,bridge,ok,"""Queen City""",Bangor,Bangor,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.00011745,1.881,563,55
+5ade51b45542997c77adedf4,bridge,ok,Arrowhead Stadium,Arrowhead Stadium,Arrowhead Stadium,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001176,1.593,584,50
+5ae4c49a5542995dadf24400,bridge,ok,acidic,cranberries,cranberries,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.00011805,1.588,579,52
+5a7d3470554299452d57bb56,bridge,ok,Compliance,Compliance,Compliance,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.000117,1.838,584,49
+5ae4f2c75542993aec5ec0fb,bridge,ok,Logan International Airport,Logan International Airport,Logan International Airport,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001296,2.079,592,68
+5ab1d7ac554299449642c7e6,comparison,ok,Ehretia,Ehretia,Ehretia,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011925,1.656,583,53
+5a85cead5542991dd0999ea9,bridge,ok,a pinball machine,Frank Thomas' Big Hurt,Frank Thomas' Big Hurt,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.00012015,1.688,589,53
+5a73a7c755429978a71e9068,bridge,ok,Donna Paige Helmintoller,Paige O'Hara,Paige O'Hara,0.0,0.0,0.4,0.4,0.0,0.4,0,0,0,consistent,,wrong->wrong,0,0.00012525,1.832,595,60
+5a7f113d55429934daa2fcbe,bridge,ok,"Reginald Martinez ""Reggie"" Jackson",Reggie Jackson,Reggie Jackson,0.0,0.0,0.6667,0.6667,0.0,0.6667,0,0,0,consistent,,wrong->wrong,0,0.00011835,1.317,589,50
+5ae6828f5542996d980e7bb9,bridge,ok,Thomas Mawson,Thomas Mawson,Thomas Mawson,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001215,1.788,582,57
+5ab31864554299233954ff06,bridge,ok,strings,Sarod,Sarod,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.0001182,1.81,576,53
+5abe239355429976d4830a7d,bridge,ok,Brad Silberling,Brad Silberling,Brad Silberling,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011715,1.839,581,50
+5ac2659b55429963665199a1,bridge,ok,25 laps,25 laps,25 laps,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012,1.629,576,56
+5ae058e855429945ae959331,comparison,ok,yes,yes,yes,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011475,2.286,569,49
+5a7b8749554299294a54a9db,comparison,ok,Thomas Loren Friedman,Thomas Friedman,Thomas Friedman,0.0,0.0,0.8,0.8,0.0,0.8,0,0,0,consistent,,wrong->wrong,0,0.0001209,2.166,566,60
+5a864ff7554299211dda2af2,bridge,ok,Taylor Swift,Taylor Swift,Taylor Swift,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001197,1.679,594,51
+5ae4d3c95542990ba0bbb165,comparison,ok,"Istanbul, Turkey",Istanbul,Istanbul,0.0,0.0,0.6667,0.6667,0.0,0.6667,0,0,0,consistent,,wrong->wrong,1,0.0001206,1.303,600,51
+5ab7f97a5542991d322237ef,bridge,ok,super-regional shopping mall,a super-regional shopping mall,a super-regional shopping mall,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001203,1.954,578,56
+5a7b46e55542995eb53be8e5,bridge,ok,Ordos City,"Ordos City China Science Flying Universe Science and Technology Co., Ltd.","Ordos City China Science Flying Universe Science and Technology Co., Ltd.",0.0,0.0,0.3077,0.3077,0.0,0.3077,0,0,0,consistent,,wrong->wrong,1,0.0001191,1.72,618,44
+5a879ba55542993e715abfc3,comparison,ok,Scott Sidney,Alain Resnais,Alain Resnais,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.0001188,1.699,584,52
+5ae4563e5542996836b02c7f,bridge,ok,over 600 stores,over 600,over 600,0.0,0.0,0.8,0.8,0.0,0.8,0,0,0,consistent,,wrong->wrong,1,0.0001194,1.577,592,51
+5ab6ff3a5542991d3222372a,bridge,ok,Berea College,Berea College,Berea College,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001194,1.639,584,53
+5a7a46605542994f819ef1ad,bridge,ok,1945,1946,1946,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.00012165,1.708,599,53
+5ade7a435542997c77adee3a,bridge,ok,Mountbatten family,Mountbatten family,Mountbatten family,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001233,1.539,622,50
+5ac1795f5542994ab5c67d5f,bridge,ok,James Burke,James Burke,James Burke,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011985,1.577,591,52
+5ab1e984554299340b525428,comparison,ok,Gulangyu,Gulangyu,Gulangyu is larger,1.0,0.0,1.0,0.5,1.0,1.0,0,1,1,edited,different_final_answer,correct->wrong,0,0.00011925,1.661,595,50
+5a86769c5542994775f60776,bridge,ok,Slaughterhouse-Five,Slaughterhouse-Five,Kurt Vonnegut,1.0,0.0,1.0,0.0,1.0,1.0,0,1,1,edited,different_final_answer,correct->wrong,0,0.000126,1.66,620,55
+5ab7da6f55429928e1fe3928,bridge,ok,the east of Ireland,Leinster,Leinster,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.0001203,2.667,590,53
+5ae497f15542995ad6573db8,bridge,ok,Distillery,Distillery,Distillery,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001164,1.806,572,51
+5ae6f2a7554299572ea5464a,bridge,ok,Tybalt,Romeo,Romeo,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.00012,1.67,612,47
+5adea9ea55429939a52fe934,bridge,ok,SKUM,SKUM,SKUM,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012,1.661,592,52
+5a7caae75542996dd594b971,bridge,ok,Anabolic steroids,Methyltestosterone,Methyltestosterone,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.0001206,1.697,588,54
+5ac01bb8554299012d1db5a6,bridge,ok,Don S. Davis,Don S. Davis,Don S. Davis,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001236,1.866,620,51
+5abc3a65554299700f9d782d,bridge,ok,Charles Kelley,Lady Antebellum,Lady Antebellum,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.00012465,1.862,595,59
+5ae3ff575542995dadf242aa,bridge,ok,"3,384,569","3,384,569","3,384,569",1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011745,1.694,603,45
+5a89fb525542993b751ca9d6,bridge,ok,Anna Clyne,Anna Clyne,Anna Clyne,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012105,1.92,587,55
+5ab3d69255429969a97a81c9,bridge,ok,USS Essex,USS Essex (CV-9),USS Essex (CV-9),0.0,0.0,0.8,0.8,0.0,0.8,0,0,0,consistent,,wrong->wrong,1,0.00012585,1.895,607,58
+5ac5199a5542994611c8b38a,comparison,ok,yes,yes,yes,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001188,2.155,580,53
+5ae048a255429924de1b708e,bridge,ok,Catwoman,Catwoman,Catwoman,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.000123,2.14,584,59
+5a9068a95542990a98493621,bridge,ok,7 miles,7 miles,7 miles,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001194,1.711,580,54
+5adf9dc3554299025d62a2e6,bridge,ok,Laura Ann Osnes,Laura Osnes,Laura Osnes,0.0,0.0,0.8,0.8,0.0,0.8,0,0,0,consistent,,wrong->wrong,0,0.00013425,2.186,631,66
+5ae406245542995dadf242e2,bridge,ok,20,more than 20,more than 20,0.0,0.0,0.5,0.5,0.0,0.5,0,0,0,consistent,,wrong->wrong,1,0.0001179,1.737,574,53
+5ab6369655429953192ad2a1,comparison,ok,Eucryphia,Eucryphia,Eucryphia,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001182,1.671,572,54
+5ae628f55542995703ce8b32,bridge,ok,Venice,Venice,Venice,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012,1.639,584,54
+5adccdd55542992c1e3a2408,bridge,ok,Waimea Bay,Waimea Bay,Waimea Bay,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001248,2.041,604,57
+5abd1529554299114383a1e3,bridge,ok,evangelical Christian periodical,Christianity Today,Christianity Today,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.00011655,1.818,565,53
+5a78db8055429970f5fffdb2,bridge,ok,James Franco,James Franco,James Franco,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012315,1.954,565,64
+5ab9debb55429955dce3ed97,bridge,ok,DI Humphrey Goodman,DI Humphrey Goodman,DI Humphrey Goodman,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011865,1.608,591,50
+5ae791ef55429952e35ea979,bridge,ok,February,February,February,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.000123,1.72,584,59
+5ab8f7535542991b5579f0a7,comparison,ok,Sacred Planet,Sacred Planet,Sacred Planet,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001143,1.631,570,48
+5ac119335542992a796dede4,bridge,ok,Hanna,Hanna,Hanna,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011655,1.695,569,52
+5a7d2afd5542995f4f402221,comparison,ok,Ferdi Taygan,Ferdi Taygan,Ferdi Taygan,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012195,1.619,585,57
+5a8dd5f955429917b4a5bcc7,bridge,ok,paracyclist,paracycling,paracycling,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.00011865,1.401,571,55
+5a83a532554299334474606f,bridge,ok,The Dragon School in Oxford,The Dragon School and Haileybury,The Dragon School and Haileybury,0.0,0.0,0.5,0.5,0.0,0.5,0,0,0,consistent,,wrong->wrong,1,0.00011625,1.49,583,48
+5a90692f5542990a98493625,bridge,ok,Suicide Kings,Suicide Kings,Suicide Kings,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001209,1.756,594,53
+5a7555215542996c70cfaee1,comparison,ok,Hey Pa! There's a Goat on the Roof,Hey Pa! There's a Goat on the Roof,Hey Pa! There's a Goat on the Roof,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012345,1.71,595,57
+5a90580655429933b8a204ef,bridge,ok,a record of 13–3,13–3,13–3,0.0,0.0,0.5,0.5,0.0,0.5,0,0,0,consistent,,wrong->wrong,1,0.00011415,1.426,585,44
+5a88e605554299206df2b39c,bridge,ok,"8,211 at the 2010 census",8211,8211,0.0,0.0,0.4,0.4,0.0,0.4,0,1,0,flag_same_answer,different_final_answer,wrong->wrong,1,0.0001176,1.916,584,50
+5add67915542992200553af8,bridge,ok,The Crowned Prince of the Philadelphia Mob,Salvie,Salvie,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.00011535,1.87,561,52
+5a8463545542990548d0b2a3,bridge,ok,supervisor of the royal works,supervisor of the royal works,supervisor of the royal works,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001302,1.846,624,61
+5a74684655429929fddd8410,bridge,ok,Janet Damita Jo Jackson,Janet Jackson,Janet Jackson,0.0,0.0,0.6667,0.6667,0.0,0.6667,0,0,0,consistent,,wrong->wrong,0,0.00011625,1.815,587,47
+5a835c9f5542992ef85e228a,bridge,ok,Continental Army,Continental Army,Continental Army,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012315,1.825,593,57
+5ae7edee554299540e5a56ad,bridge,ok,Macaronesia,Canary Islands,Canary Islands,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.0001215,1.745,594,54
+5a8ee4315542990e94052ba7,bridge,ok,Treaty of Gandamak,Treaty of Gandamak,Treaty of Gandamak,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001248,1.789,624,52
+5a8cb288554299585d9e3726,bridge,ok,Oregon,Oregon,Oregon,1.0,1.0,1.0,1.0,1.0,1.0,0,1,0,flag_same_answer,different_final_answer,correct->correct,0,0.00012525,1.535,639,49
+5adfbca255429942ec259b2c,bridge,ok,early 1970s,early 1970s,early 1970s,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001224,1.516,592,56
+5ae24abc5542994d89d5b3c3,bridge,ok,"Bury St Edmunds,","Bury St Edmunds, Suffolk, England","Bury St Edmunds, Suffolk, England",0.0,0.0,0.75,0.75,0.0,0.75,0,0,0,consistent,,wrong->wrong,1,0.0001263,1.948,570,68
+5ab802085542990e739ec7ca,bridge,ok,early 20s,18,18,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.00012,1.814,592,52
+5adfa3da554299025d62a317,bridge,ok,23 November 1946,23 November 1946,23 November 1946,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011445,1.901,579,46
+5a76e88555429972597f13f4,bridge,ok,The Soloist,The Soloist,The Soloist,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012495,1.989,601,58
+5ac3ae475542995ef918c1e5,comparison,ok,no,no,no,1.0,1.0,1.0,1.0,1.0,1.0,0,1,0,flag_same_answer,yes_no_reversed,correct->correct,0,0.00011805,1.691,595,48
+5abffc41554299012d1db551,bridge,ok,1901,1901,1901,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001161,1.82,574,50
+5ae4c39f5542995dadf243fb,bridge,ok,Bolton,Bolton,Bolton,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001191,1.924,578,54
+5a79c6a55542994bb9457091,bridge,ok,George Cayley,Sir George Cayley,Sir George Cayley,0.0,0.0,0.8,0.8,0.0,0.8,0,0,0,consistent,,wrong->wrong,1,0.0001224,1.632,608,52
+5a7be5bd5542997c3ec972ba,comparison,ok,The Leonberger is a giant dog breed.,Leonberger,Leonberger,0.0,0.0,0.3333,0.3333,0.0,0.3333,0,0,0,consistent,,wrong->wrong,0,0.000117,1.846,572,52
+5a7ec61a55429934daa2fc5f,comparison,ok,yes,yes,yes,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011895,1.759,593,50
+5a7cb9b95542990527d55515,bridge,ok,2013,2010,2010,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.00012765,2.075,607,61
+5a867089554299211dda2b30,comparison,ok,Rolling Stone,Shonen Jump,Shonen Jump,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.0001161,2.3,566,52
+5ae1801955429901ffe4aec4,bridge,ok,"Battle Creek, Michigan","Milwaukee, Wisconsin","Milwaukee, Wisconsin",0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.00012225,2.04,579,59
+5a76387d554299109176e6ba,comparison,ok,Am Rong,Am Rong,Am Rong,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011355,1.694,569,47
+5abd0d635542992ac4f381b8,bridge,ok,29,29 days,29 days,0.0,0.0,0.6667,0.6667,0.0,0.6667,0,0,0,consistent,,wrong->wrong,1,0.0001254,2.221,604,58
+5ae68fcb5542992ae0d1635b,bridge,ok,"Bay Ridge, Brooklyn","Bay Ridge, Brooklyn","Bay Ridge, Brooklyn",1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012,1.926,588,53
+5ab28b12554299449642c8ee,bridge,ok,Northumbrian,Northumbrian,Northumbrian,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012165,1.974,575,59
+5a7133565542994082a3e65c,bridge,ok,Oldham County,Oldham County,Oldham County,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012525,1.479,599,59
+5abbd3ac55429931dba1458b,comparison,ok,no,no,yes,1.0,0.0,1.0,0.0,0.0,0.0,1,1,1,edited,yes_no_reversed,correct->wrong,0,0.00012435,2.04,553,69
+5a85ab905542994c784ddb35,bridge,ok,The Saturdays,"Una Healy, Rachel Stevens","Una Healy, Rachel Stevens",0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.00011835,1.735,581,52
+5a8d93ad554299653c1aa13d,comparison,ok,Serri,Serri,Serri,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011625,2.047,579,49
+5a886886554299206df2b258,bridge,ok,international football competition,FIFA Women's World Cup,FIFA Women's World Cup,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.00012465,1.737,611,55
+5a7c6bcc55429935c91b519c,bridge,ok,1944,1944,1944,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011505,2.025,575,48
+5a825bb455429940e5e1a874,bridge,ok,Wilmette,"Wilmette, Illinois","Wilmette, Illinois",0.0,0.0,0.6667,0.6667,0.0,0.6667,0,0,0,consistent,,wrong->wrong,1,0.0001173,1.899,586,49
+5a72a0be5542992359bc3143,bridge,ok,Oedipus Rex,Oedipus Rex,Oedipus Rex,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00013185,2.316,631,62
+5ade15f35542997545bbbe47,bridge,ok,Steve Jobs,portrayed in a film,portrayed in a film,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.00011685,1.969,571,52
+5a77cb5e55429967ab1052a7,bridge,ok,Kodos,Kodos,Kodos,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012285,2.054,607,53
+5a83aaeb5542996488c2e483,bridge,ok,My Beautiful Dark Twisted Fantasy,Graduation,Graduation,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.0001197,2.248,578,55
+5ac4392e5542997ea680ca32,comparison,ok,yes,yes,yes,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001221,2.016,598,54
+5a7f5c9f55429969796c1a0f,bridge,ok,Spring city,Spring city,Spring city,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011505,2.028,567,50
+5a8b770f5542995d1e6f13a7,bridge,ok,Philadelphia,Philadelphia,Philadelphia,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011475,1.794,561,51
+5ae3dc205542992f92d823a1,bridge,ok,a minor basilica,minor basilica,minor basilica,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00013125,2.212,599,69
+5a7cf29255429909bec768b8,bridge,ok,150 million copies,over 150 million,over 150 million,0.0,0.0,0.6667,0.6667,0.0,0.6667,0,0,0,consistent,,wrong->wrong,1,0.00011655,1.689,593,46
+5a79f6ca554299029c4b5f90,bridge,ok,Aqua,Aqua,Aqua,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00012165,2.041,591,55
+5a8e3dc05542995085b37401,comparison,ok,1964,Reynolds v. Sims,Reynolds v. Sims,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.0001155,1.604,574,49
+5ade24e35542992fa25da6e6,bridge,ok,CBS,CBS,CBS,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011835,1.843,585,51
+5ab5f854554299637185c64e,bridge,ok,Pakistani,Pakistan,Pakistan,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.00011835,1.876,597,48
+5ab5b6c1554299637185c5e5,comparison,ok,The Four Seasons,The Four Seasons,The Four Seasons,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001197,1.927,586,53
+5ae25ed15542992decbdccd2,comparison,ok,no,no,no,1.0,1.0,1.0,1.0,1.0,1.0,0,1,0,flag_yesno_invalid,yes_no_reversed,correct->correct,0,0.0001275,2.011,594,64
+5ab808ea5542991d3222380e,bridge,ok,"76,416","76,416","76,416",1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001158,2.347,580,48
+5ae5072e55429960a22e0246,bridge,ok,Matt Flynn,Matt Flynn,Matt Flynn,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.00011865,2.555,567,56
+5ac01bca5542992a796dec8d,bridge,ok,Happy Death Day,Happy Death Day,Happy Death Day,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001173,1.633,570,53
+5adf34d35542993a75d26425,bridge,ok,"Gerard ""Gerry"" Adams",Gerry Adams,Gerry Adams,0.0,0.0,0.8,0.8,0.0,0.8,0,0,0,consistent,,wrong->wrong,0,0.0001191,1.776,582,53
+5add67555542992ae4cec54e,comparison,ok,The Battle of Belleau Wood,Battle of Belleau Wood,Battle of Belleau Wood,1.0,1.0,1.0,1.0,1.0,1.0,0,1,0,flag_span_not_in_quote,different_final_answer,correct->correct,0,0.000117,1.848,596,46
+5a8085705542992bc0c4a74b,bridge,ok,Australian Defence Force,Royal Australian Navy,Royal Australian Navy,0.0,0.0,0.3333,0.3333,0.0,0.3333,0,0,0,consistent,,wrong->wrong,0,0.000117,2.309,580,50
+5a756fa15542996c70cfaefb,bridge,ok,"about 450,000","240,600","240,600",0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,0,0.0001167,1.901,582,49
+5a7f6eab5542992097ad2f66,bridge,ok,West Point Iron and Cannon Foundry,West Point Foundry,West Point Foundry,0.0,0.0,0.6667,0.6667,0.0,0.6667,0,0,0,consistent,,wrong->wrong,0,0.00012285,1.734,599,55
+5ae5e1345542996de7b71a50,bridge,ok,Jack Ryan,Sam Fisher,The Sum of All Fears,0.0,0.0,0.0,0.0,0.0,0.0,0,1,1,edited,different_final_answer,wrong->wrong,1,0.00012435,1.269,605,56
+5a72c6f65542994cef4bc402,bridge,ok,tomato,tomatoes,tomatoes,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,consistent,,wrong->wrong,1,0.00011655,1.804,573,51
+5a80ad7c5542992097ad3018,bridge,ok,2009,2009,2009,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0,consistent,,correct->correct,0,0.0001203,1.844,598,51

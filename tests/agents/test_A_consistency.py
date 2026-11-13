@@ -176,6 +176,30 @@ class TestGate(unittest.TestCase):
                                   'explanation_quote', 'original_short_answer', 'final_short_answer'})
 
 
+class TestStrictVariant(unittest.TestCase):
+    def test_strict_blocks_edit_when_explanation_also_contains_original(self):
+        d = AnswerDraft('v:draft', 'North Atlantic Conference',
+                        'The America East Conference was known as the North Atlantic Conference from 1988 to 1996.')
+        _, _, dec, _ = run(QAInput('v', 'Formerly known as what?', []), d,
+                           reply(False, 'America East Conference', d.explanation, mtype='different_final_answer'))
+        self.assertTrue(dec.edited)                       # standard gate edits
+        self.assertFalse(K.strict_gate_allows(d, dec))    # strict variant keeps the draft
+
+    def test_strict_keeps_intermediate_hop_fix_and_yes_no(self):
+        _, _, dec, _ = run(STRAS, STRAS_DRAFT, reply(False, '276,170 inhabitants', QUOTE))
+        self.assertFalse(K.strict_gate_allows(STRAS_DRAFT, dec))   # 'Strasbourg' is in the explanation
+        d = AnswerDraft('h:draft', 'Raven', "Her best-known role is in 'Teen Titans Go!'.")
+        _, _, dec, _ = run(QAInput('h', 'Which series?', []), d,
+                           reply(False, 'Teen Titans Go!', d.explanation))
+        self.assertTrue(K.strict_gate_allows(d, dec))
+        _, _, dec, _ = run(YN, YN_DRAFT, reply(False, 'no', 'Ajuga is a genus of flowering plants.'))
+        self.assertTrue(K.strict_gate_allows(YN_DRAFT, dec.to_dict()))
+
+    def test_strict_never_adds_edits(self):
+        _, _, dec, _ = run(OK, OK_DRAFT, reply(True))
+        self.assertFalse(K.strict_gate_allows(OK_DRAFT, dec))
+
+
 class TestAgentEntryPoint(unittest.TestCase):
     def test_agent_method_accepts_dicts_like_runner_cache(self):
         agent = A.AnswerAgent(CFG)

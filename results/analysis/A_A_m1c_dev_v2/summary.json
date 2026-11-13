@@ -1,0 +1,98 @@
+{
+ "run_dir": "results\\runs\\A_m1c_dev_v2",
+ "source_run": "results\\runs\\dev_v2",
+ "n_paired": 50,
+ "n_ok": 50,
+ "n_error": 0,
+ "prompt_versions": {
+  "answer.draft": "draft_v1@1dd344355e",
+  "answer.consistency_check": "consistency_check_v2@3593307f14",
+  "baselines.self_check": "self_check_v2@3ba3251c9c",
+  "baselines.self_revise": "self_revise_v2@6679f79380",
+  "baselines.independent_critic": "independent_critic_v2@cb0700008a"
+ },
+ "agent_config": {
+  "model": "openai/gpt-4o-mini",
+  "temperature": 0.0,
+  "max_tokens": 300,
+  "max_parse_repairs": 1
+ },
+ "metrics": {
+  "M1": {
+   "em": 0.54,
+   "f1": 0.6877
+  },
+  "M1C": {
+   "em": 0.54,
+   "f1": 0.6944
+  }
+ },
+ "paired_bootstrap_M1C_minus_M1": {
+  "em": {
+   "n": 50,
+   "delta_obs": 0.0,
+   "ci_low": -0.08,
+   "ci_high": 0.08,
+   "confidence": 0.95,
+   "p_value": 0.6028,
+   "n_resamples": 5000
+  },
+  "f1": {
+   "n": 50,
+   "delta_obs": 0.0067,
+   "ci_low": -0.0733,
+   "ci_high": 0.0867,
+   "confidence": 0.95,
+   "p_value": 0.4594,
+   "n_resamples": 5000
+  }
+ },
+ "detection_rate": 0.22,
+ "edit_rate": 0.14,
+ "gate_outcomes": {
+  "consistent": 39,
+  "flag_yesno_invalid": 1,
+  "edited": 7,
+  "flag_same_answer": 3
+ },
+ "mismatch_types_flagged": {
+  "yes_no_reversed": 4,
+  "different_final_answer": 7
+ },
+ "transitions": {
+  "correct->correct": 25,
+  "wrong->wrong": 21,
+  "wrong->correct": 2,
+  "correct->wrong": 2
+ },
+ "flag_and_edit_rate_by_draft_correctness": {
+  "draft_correct": {
+   "n": 27,
+   "flag_rate": 0.1852,
+   "edit_rate": 0.0741
+  },
+  "draft_wrong": {
+   "n": 23,
+   "flag_rate": 0.2609,
+   "edit_rate": 0.2174
+  }
+ },
+ "headroom": {
+  "wrong_drafts_with_gold_in_explanation": 14,
+  "flagged": 4,
+  "edited": 3,
+  "fixed": 1
+ },
+ "cost": {
+  "total_usd": 0.005966,
+  "per_question_usd": 0.0001193,
+  "mean_latency_s": 1.8885,
+  "mean_input_tokens": 589.04,
+  "mean_output_tokens": 51.6
+ },
+ "notes": [
+  "errors count as EM/F1 = 0 for M1C (protocol); M1 is the unchanged shared draft",
+  "headroom = wrong drafts whose gold answer string appears in their own explanation (evaluation-only diagnostic, gold never used by the checker)",
+  "paired bootstrap: 5000 resamples over question ids, seed 42; a CI that includes 0 is not a significant difference"
+ ]
+}

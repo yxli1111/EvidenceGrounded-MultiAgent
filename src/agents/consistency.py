@@ -200,3 +200,23 @@ def check_consistency(example: QAInput, draft: AnswerDraft, llm: LLMClient,
         revision = RevisionResult(draft_id=draft.draft_id, feedback_id=feedback.feedback_id,
                                   final_answer=new_answer, final_explanation=draft.explanation)
     return feedback, revision, decision
+
+
+# --------------------------------------------------------------------------- strict variant (secondary, offline)
+
+def strict_gate_allows(draft: AnswerDraft, decision: ConsistencyDecision | dict) -> bool:
+    """Secondary analysis, fixed before the fresh evaluation: keep an edit only if the
+    standard gate edited AND the explanation does not ALSO contain the original answer
+    (if it does, the explanation itself is ambiguous). Yes/no flips are exempt because the
+    words yes/no rarely occur in explanations. Pure post-processing of a logged decision:
+    no extra LLM call, so it can be scored on the same run.
+    """
+    d = decision.to_dict() if isinstance(decision, ConsistencyDecision) else decision
+    if not d.get('edited'):
+        return False
+    draft = as_draft(draft)
+    if _is_yes_no(draft.short_answer):
+        return True
+    key = _strip_edges(draft.short_answer)
+    return bool(key) and key not in _surface(draft.explanation)
+

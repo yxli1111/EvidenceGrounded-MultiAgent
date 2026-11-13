@@ -144,6 +144,9 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(s['headroom']['wrong_drafts_with_gold_in_explanation'], 2)
         self.assertEqual(s['headroom']['fixed'], 1)
         self.assertEqual(s['paired_bootstrap_M1C_minus_M1']['em']['n_resamples'], 5000)
+        # strict variant: e1's draft 'Strasbourg' is in its explanation -> edit dropped
+        self.assertEqual(s['secondary_strict_gate']['metrics']['em'], 0.5)
+        self.assertEqual(s['secondary_strict_gate']['edit_rate'], 0.0)
         with (out / 'case_table.csv').open(encoding='utf-8-sig') as fh:
             rows = list(csv.DictReader(fh))
         self.assertEqual({r['example_id'] for r in rows}, {'e1', 'e3', 'e4'})

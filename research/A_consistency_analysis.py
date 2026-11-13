@@ -52,6 +52,7 @@ def _r(x, k=4):
 def analyse(source_run: Path, run_dir: Path, out_dir: Path, reviewed: Path | None = None) -> dict:
     from src.evaluation.answer_metrics import exact_match, normalize_answer, token_f1  # E
     from src.evaluation.statistical import paired_bootstrap_ci                       # E
+    from src.agents.consistency import strict_gate_allows                            # A
 
     m1 = _latest(source_run / 'records.jsonl', 'M1')
     m1c = _latest(run_dir / 'records.jsonl', 'M1C')
@@ -68,14 +69,18 @@ def analyse(source_run: Path, run_dir: Path, out_dir: Path, reviewed: Path | Non
         ok = c['status'] == 'ok'
         dec = c.get('decision') or {}
         f_ans = ((c.get('final') or {}).get('final_answer') or d_ans) if ok else ''
+        strict_edit = ok and strict_gate_allows(a['draft'], dec)
+        s_ans = (f_ans if strict_edit else d_ans) if ok else ''
         em1, f11 = exact_match(d_ans, g), token_f1(d_ans, g)
         em2, f12 = (exact_match(f_ans, g), token_f1(f_ans, g)) if ok else (0.0, 0.0)  # error = 0
+        em3, f13 = (exact_match(s_ans, g), token_f1(s_ans, g)) if ok else (0.0, 0.0)
         ng = normalize_answer(g)
         headroom = (not em1) and bool(ng) and ng not in ('yes', 'no') and ng in normalize_answer(expl)
         usage = c.get('usage') or []
         row = {'example_id': eid, 'question_type': c.get('question_type'), 'status': c['status'],
                'gold': g, 'draft_answer': d_ans, 'final_answer': f_ans,
                'm1_em': em1, 'm1c_em': em2, 'm1_f1': _r(f11), 'm1c_f1': _r(f12),
+               'm1cs_em': em3, 'm1cs_f1': _r(f13), 'strict_edited': int(bool(strict_edit)),
                'flagged': int(bool(dec.get('flagged'))), 'edited': int(bool(dec.get('edited'))),
                'gate': dec.get('gate') or ('error' if not ok else ''),
                'mismatch_type': dec.get('mismatch_type') or '',
@@ -116,6 +121,17 @@ def analyse(source_run: Path, run_dir: Path, out_dir: Path, reviewed: Path | Non
         'metrics': {'M1': {'em': mean([r['m1_em'] for r in rows]), 'f1': mean([r['m1_f1'] for r in rows])},
                     'M1C': {'em': mean([r['m1c_em'] for r in rows]), 'f1': mean([r['m1c_f1'] for r in rows])}},
         'paired_bootstrap_M1C_minus_M1': {'em': boot('em'), 'f1': boot('f1')},
+        'secondary_strict_gate': {
+            'rule': 'keep an edit only if the explanation does not also contain the original answer (yes/no exempt); '
+                    'fixed before the fresh evaluation; computed offline from the same run',
+            'metrics': {'em': mean([r['m1cs_em'] for r in rows]), 'f1': mean([r['m1cs_f1'] for r in rows])},
+            'edit_rate': mean([r['strict_edited'] for r in rows]),
+            'transitions': dict(collections.Counter(
+                ('correct' if r['m1_em'] else 'wrong') + '->' + ('correct' if r['m1cs_em'] else 'wrong')
+                for r in rows if r['status'] == 'ok')),
+            'paired_bootstrap_minus_M1': {k: {kk: _r(v) for kk, v in paired_bootstrap_ci(
+                [r[f'm1cs_{k}'] for r in rows], [r[f'm1_{k}'] for r in rows],
+                n_resamples=N_RESAMPLES, seed=SEED).items()} for k in ('em', 'f1')}},
         'detection_rate': mean([r['flagged'] for r in rows]), 'edit_rate': mean([r['edited'] for r in rows]),
         'gate_outcomes': dict(collections.Counter(r['gate'] for r in rows)),
         'mismatch_types_flagged': dict(collections.Counter(r['mismatch_type'] for r in rows if r['flagged'])),
@@ -175,6 +191,7 @@ def main(argv=None) -> int:
     out = a.out or ROOT / 'results' / 'analysis' / f'A_{a.run.name}'
     s = analyse(a.source_run, a.run, out, a.reviewed)
     print(json.dumps({k: s[k] for k in ('n_paired', 'n_error', 'metrics', 'paired_bootstrap_M1C_minus_M1',
+                                         'secondary_strict_gate',
                                          'detection_rate', 'edit_rate', 'gate_outcomes', 'transitions',
                                          'flag_and_edit_rate_by_draft_correctness', 'headroom', 'cost')},
                      indent=1, ensure_ascii=False))

@@ -1,0 +1,133 @@
+{
+ "run_dir": "results\\runs\\A_m1c_fresh200",
+ "source_run": "results\\runs\\fresh_m1_n300",
+ "n_paired": 200,
+ "n_ok": 200,
+ "n_error": 0,
+ "prompt_versions": {
+  "answer.draft": "draft_v1@1dd344355e",
+  "answer.consistency_check": "consistency_check_v2@3593307f14",
+  "baselines.self_check": "self_check_v2@3ba3251c9c",
+  "baselines.self_revise": "self_revise_v2@6679f79380",
+  "baselines.independent_critic": "independent_critic_v2@cb0700008a"
+ },
+ "agent_config": {
+  "model": "openai/gpt-4o-mini",
+  "temperature": 0.0,
+  "max_tokens": 300,
+  "max_parse_repairs": 1
+ },
+ "metrics": {
+  "M1": {
+   "em": 0.57,
+   "f1": 0.7017
+  },
+  "M1C": {
+   "em": 0.545,
+   "f1": 0.6785
+  }
+ },
+ "paired_bootstrap_M1C_minus_M1": {
+  "em": {
+   "n": 200,
+   "delta_obs": -0.025,
+   "ci_low": -0.055,
+   "ci_high": 0.005,
+   "confidence": 0.95,
+   "p_value": 0.9734,
+   "n_resamples": 5000
+  },
+  "f1": {
+   "n": 200,
+   "delta_obs": -0.0232,
+   "ci_low": -0.0525,
+   "ci_high": 0.0043,
+   "confidence": 0.95,
+   "p_value": 0.952,
+   "n_resamples": 5000
+  }
+ },
+ "secondary_strict_gate": {
+  "rule": "keep an edit only if the explanation does not also contain the original answer (yes/no exempt); fixed before the fresh evaluation; computed offline from the same run",
+  "metrics": {
+   "em": 0.565,
+   "f1": 0.6967
+  },
+  "edit_rate": 0.005,
+  "transitions": {
+   "correct->correct": 113,
+   "wrong->wrong": 86,
+   "correct->wrong": 1
+  },
+  "paired_bootstrap_minus_M1": {
+   "em": {
+    "n": 200,
+    "delta_obs": -0.005,
+    "ci_low": -0.015,
+    "ci_high": 0.0,
+    "confidence": 0.95,
+    "p_value": 1.0,
+    "n_resamples": 5000
+   },
+   "f1": {
+    "n": 200,
+    "delta_obs": -0.005,
+    "ci_low": -0.015,
+    "ci_high": 0.0,
+    "confidence": 0.95,
+    "p_value": 1.0,
+    "n_resamples": 5000
+   }
+  }
+ },
+ "detection_rate": 0.11,
+ "edit_rate": 0.07,
+ "gate_outcomes": {
+  "consistent": 178,
+  "edited": 14,
+  "flag_same_answer": 6,
+  "flag_yesno_invalid": 1,
+  "flag_span_not_in_quote": 1
+ },
+ "mismatch_types_flagged": {
+  "different_final_answer": 16,
+  "yes_no_reversed": 5,
+  "stopped_at_intermediate_step": 1
+ },
+ "transitions": {
+  "correct->correct": 107,
+  "wrong->wrong": 84,
+  "correct->wrong": 7,
+  "wrong->correct": 2
+ },
+ "flag_and_edit_rate_by_draft_correctness": {
+  "draft_correct": {
+   "n": 114,
+   "flag_rate": 0.1053,
+   "edit_rate": 0.0614
+  },
+  "draft_wrong": {
+   "n": 86,
+   "flag_rate": 0.1163,
+   "edit_rate": 0.0814
+  }
+ },
+ "headroom": {
+  "wrong_drafts_with_gold_in_explanation": 46,
+  "flagged": 5,
+  "edited": 4,
+  "fixed": 2
+ },
+ "cost": {
+  "total_usd": 0.024042,
+  "per_question_usd": 0.0001202,
+  "mean_latency_s": 1.8359,
+  "mean_input_tokens": 588.075,
+  "mean_output_tokens": 53.33
+ },
+ "notes": [
+  "errors count as EM/F1 = 0 for M1C (protocol); M1 is the unchanged shared draft",
+  "headroom = wrong drafts whose gold answer string appears in their own explanation (evaluation-only diagnostic, gold never used by the checker)",
+  "paired bootstrap: 5000 resamples over question ids, seed 42; a CI that includes 0 is not a significant difference"
+ ]
+}

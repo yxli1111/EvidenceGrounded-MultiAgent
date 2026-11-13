@@ -1,0 +1,51 @@
+﻿example_id,question_type,status,gold,draft_answer,final_answer,m1_em,m1c_em,m1_f1,m1c_f1,flagged,edited,gate,transition,headroom_gold_in_explanation,cost_usd,latency_s,input_tokens,output_tokens
+5a8b57f25542995d1e6f1371,comparison,ok,yes,yes,yes,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,9.93e-05,2.169,462,50
+5a8c7595554299585d9e36b6,bridge,ok,Chief of Protocol,United States ambassador,United States ambassador,0.0,0.0,0.0,0.0,0,0,consistent,wrong->wrong,0,9.525e-05,1.463,459,44
+5a85ea095542994775f606a8,bridge,ok,Animorphs,Animorphs,Animorphs,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,0.00010545,1.691,499,51
+5adbf0a255429947ff17385a,comparison,ok,no,no,no,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,9.675e-05,1.549,465,45
+5a8e3ea95542995a26add48d,bridge,ok,"Greenwich Village, New York City",Greenwich Village,Greenwich Village,0.0,0.0,0.5714,0.5714,0,0,consistent,wrong->wrong,1,9.255e-05,1.643,453,41
+5abd94525542992ac4f382d2,bridge,ok,YG Entertainment,YG Entertainment,YG Entertainment,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,0.0001023,1.529,478,51
+5a85b2d95542997b5ce40028,bridge,ok,Eenasul Fateh,Eenasul Fateh,Eenasul Fateh,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,0.0001053,1.563,478,56
+5a87ab905542996e4f3088c1,bridge,ok,"3,677 seated","3,677","4,000",0.0,0.0,0.6667,0.0,1,1,edited,wrong->wrong,0,0.00010155,1.549,465,53
+5a7bbb64554299042af8f7cc,bridge,ok,Terry Richardson,Annie Morton,Terry Richardson,0.0,1.0,0.0,1.0,1,1,edited,wrong->correct,1,0.00010515,1.695,457,61
+5a8db19d5542994ba4e3dd00,comparison,ok,yes,yes,yes,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,9.705e-05,1.399,459,47
+5a7166395542994082a3e814,bridge,ok,Kansas Song,Kansas Song (We’re From Kansas),Kansas Song (We’re From Kansas),0.0,0.0,0.5714,0.5714,0,0,consistent,wrong->wrong,1,9.645e-05,1.364,483,40
+5a877e5d5542993e715abf7d,bridge,ok,David Weissman,David Weissman,David Weissman,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,0.00010485,1.879,479,55
+5ab3b0bf5542992ade7c6e39,bridge,ok,1999,1999,1999,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,0.0001008,1.614,492,45
+5ab56e32554299637185c594,comparison,ok,no,yes,no,0.0,1.0,0.0,1.0,1,1,edited,wrong->correct,0,0.0001164,2.056,468,77
+5ab6d09255429954757d337d,bridge,ok,from 1986 to 2013,1986 to 2013,1986 to 2013,0.0,0.0,0.8571,0.8571,0,0,consistent,wrong->wrong,1,9.585e-05,1.34,463,44
+5a75e05c55429976ec32bc5f,bridge,ok,"9,984","9,984","9,984",1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,9.48e-05,1.321,464,42
+5ab3e45655429976abd1bcd4,bridge,ok,the North Atlantic Conference,North Atlantic Conference,America East Conference,1.0,0.0,1.0,0.3333,1,1,edited,correct->wrong,0,0.0001164,2.034,472,76
+5ab29c24554299449642c932,comparison,ok,yes,yes,yes,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,9.69e-05,1.35,454,48
+5ae0d4c9554299603e418468,bridge,ok,1969 until 1974,1969-1974,1969-1974,0.0,0.0,0.0,0.0,0,0,consistent,wrong->wrong,1,9.435e-05,1.322,469,40
+5a8133725542995ce29dcbdb,comparison,ok,Robert Erskine Childers DSC,Robert Erskine Childers,Robert Erskine Childers,0.0,0.0,0.8571,0.8571,0,0,consistent,wrong->wrong,0,9.87e-05,1.295,462,49
+5ae7a8175542993210983ed8,bridge,ok,Pedro Rodríguez,Pedro Rodríguez,Sergio Pérez,1.0,0.0,1.0,0.0,1,1,edited,correct->wrong,0,0.00010515,1.466,461,60
+5ae6050f55429929b0807a5e,bridge,ok,Sonic,Jim Cummings,Dr. Robotnik,0.0,0.0,0.0,0.0,1,1,edited,wrong->wrong,1,0.00011625,1.818,483,73
+5adddccd5542997dc7907069,bridge,ok,keyboard function keys,universal remote,universal remote,0.0,0.0,0.0,0.0,0,0,consistent,wrong->wrong,0,0.00010335,1.701,473,54
+5ae2070a5542994d89d5b313,comparison,ok,Badly Drawn Boy,Wolf Alice,Wolf Alice,0.0,0.0,0.0,0.0,0,0,consistent,wrong->wrong,1,9.63e-05,1.432,470,43
+5ae22b8d554299234fd0440f,bridge,ok,World's Best Goalkeeper,IFFHS World's Best Goalkeeper,IFFHS World's Best Goalkeeper,0.0,0.0,0.8571,0.8571,0,0,consistent,wrong->wrong,1,0.00010305,1.363,479,52
+5a722b8655429971e9dc9329,bridge,ok,Barton Lee Hazlewood,"Lee Hazlewood, Jim Shoulders","Lee Hazlewood, Jim Shoulders",0.0,0.0,0.5714,0.5714,0,0,consistent,wrong->wrong,0,0.00010605,1.876,475,58
+5adf37a95542995ec70e8f97,bridge,ok,1838,1838,1838,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,9.84e-05,1.892,492,41
+5abd259d55429924427fcf1a,comparison,ok,yes,yes,yes,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,0.00010185,1.925,475,51
+5a828c8355429966c78a6a50,bridge,ok,Henry J. Kaiser,Henry J. Kaiser,Henry J. Kaiser,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,0.00010215,1.519,469,53
+5a8a3e745542996c9b8d5e70,bridge,ok,Arena of Khazan,Arena of Khazan,Arena of Khazan,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,9.405e-05,1.676,471,39
+5ac23ff0554299636651994d,bridge,ok,2000,"March 14, 2000","March 14, 2000",0.0,0.0,0.5,0.5,0,0,consistent,wrong->wrong,1,9.9e-05,1.148,496,41
+5ae4a3265542995ad6573de5,comparison,ok,"Fujioka, Gunma",Japan,Japan,0.0,0.0,0.0,0.0,0,0,consistent,wrong->wrong,1,9.615e-05,1.468,461,45
+5ae0361155429925eb1afc2c,bridge,ok,Charles Eugène,François Coli,François Coli,0.0,0.0,0.0,0.0,0,0,consistent,wrong->wrong,0,9.855e-05,1.417,473,46
+5abc0a5d5542993f40c73c64,comparison,ok,no,no,no,1.0,1.0,1.0,1.0,1,0,flag_same_answer,correct->correct,0,0.00011745,2.079,483,75
+5a7cc50e554299452d57ba3e,comparison,ok,Letters to Cleo,Letters to Cleo,Letters to Cleo,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,0.0001029,1.37,506,45
+5abf63f15542997ec76fd3ea,bridge,ok,October 1922,1923,1922,0.0,0.0,0.0,0.6667,1,1,edited,wrong->wrong,1,0.000108,1.383,480,60
+5a8ef2a75542995a26add583,bridge,ok,2000,2000,2000,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,9.345e-05,1.162,451,43
+5a80721b554299485f5985ef,bridge,ok,World War II,World War I and World War II,World War I and World War II,0.0,0.0,0.6,0.6,0,0,consistent,wrong->wrong,1,9.96e-05,1.49,472,48
+5ab51dae5542991779162d82,comparison,ok,no,no,no,1.0,1.0,1.0,1.0,1,0,flag_yesno_invalid,correct->correct,0,0.0001167,2.207,462,79
+5a7571135542992d0ec05f98,bridge,ok,New York City,New York City,New York City,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,9.87e-05,1.75,450,52
+5a7a0e1e5542990783324e1a,comparison,ok,Scotch Collie,Scotch Collie,Scotch Collie,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,9.69e-05,1.636,458,47
+5a74106b55429979e288289e,bridge,ok,Mumbai,"Mumbai, Maharashtra","Mumbai, Maharashtra",0.0,0.0,0.6667,0.6667,0,0,consistent,wrong->wrong,1,9.225e-05,1.268,463,38
+5a79311755429970f5fffe67,bridge,ok,1962,1962,1962,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,9.765e-05,1.323,483,42
+5ab2d3df554299194fa9352c,bridge,ok,sovereignty,Ethiopian sovereignty,Ethiopian sovereignty,0.0,0.0,0.6667,0.6667,0,0,consistent,wrong->wrong,1,0.000102,1.357,476,51
+5a760ab65542994ccc918697,bridge,ok,Nelson Rockefeller,Nelson Rockefeller,Nelson Rockefeller,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,0.0001026,1.528,496,47
+5a7d54165542995f4f402256,bridge,ok,Yellowcraig,Firth of Forth,Firth of Forth,0.0,0.0,0.0,0.0,0,0,consistent,wrong->wrong,0,0.0001041,1.759,486,52
+5ab859a955429934fafe6d7b,bridge,ok,Phil Spector,Phil Spector,Phil Spector,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,0.0001008,1.385,500,43
+5add61d65542995b365fab21,bridge,ok,Organizations could come together to address global issues,World Summit of Nobel Peace Laureates,World Summit of Nobel Peace Laureates,0.0,0.0,0.0,0.0,0,0,consistent,wrong->wrong,0,9.93e-05,1.506,482,45
+5a8e068b5542995085b37384,comparison,ok,yes,yes,yes,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,0.00010215,1.702,477,51
+5abbf698554299114383a0b5,bridge,ok,English Electric Canberra,English Electric Canberra,English Electric Canberra,1.0,1.0,1.0,1.0,0,0,consistent,correct->correct,0,0.000105,1.082,468,58
