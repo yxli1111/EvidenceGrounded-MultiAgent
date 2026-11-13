@@ -208,6 +208,7 @@ class ExperimentRunner:
         m5_top_k_per_claim: int | None = None,
         m5_total_evidence_budget: int | None = None,
         query_include_question: bool = True,
+        m4_evidence_mode: str = "retrieval",
     ) -> None:
         self.draft_port = draft_port
         self.retrieve_port = retrieve_port
@@ -219,6 +220,11 @@ class ExperimentRunner:
         self.m5_top_k_per_claim = m5_top_k_per_claim
         self.m5_total_evidence_budget = m5_total_evidence_budget
         self.query_include_question = query_include_question
+        if m4_evidence_mode not in {"retrieval", "full_context"}:
+            raise ValueError(
+                f"Invalid M4 evidence mode: {m4_evidence_mode}"
+            )
+        self.m4_evidence_mode = m4_evidence_mode
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -282,6 +288,7 @@ class ExperimentRunner:
             "m5_total_evidence_budget": self.m5_total_evidence_budget,
             "query_include_question": self.query_include_question,
             "query_template": "question+nl+text" if self.query_include_question else "text_only",
+            "m4_evidence_mode": self.m4_evidence_mode,
         }
 
         # Compute raw_calls_path alongside the output file
@@ -526,7 +533,14 @@ class ExperimentRunner:
             explanation = draft.get("explanation", "")
         query = (question + "\n" + explanation) if self.query_include_question and question else explanation
         context = _attr(example, "context")
-        evidence = self.retrieve_port.retrieve(query, context, effective_k)
+        if self.m4_evidence_mode == "full_context":
+            evidence = self.retrieve_port.full_context(context)
+        else:
+            evidence = self.retrieve_port.retrieve(
+                query=query,
+                context=context,
+                top_k=effective_k,
+            )        
         feedback = self.verification_port.verify_draft(example, draft, evidence, effective_llm)
         revision = self.verification_port.revise_answer(example, draft, feedback, effective_llm)
         usage = self._drain_usage(effective_llm)

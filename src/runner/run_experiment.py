@@ -77,6 +77,9 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--min-key-remaining-usd", type=float, default=1.0,
                    dest="min_key_remaining_usd",
                    help="Abort if OpenRouter key balance drops below this amount (USD).")
+    p.add_argument("--m4-top-k", type=int, default=5, help="Top-k evidence sentences for M4 retrieval",)
+    p.add_argument("--m4-evidence-mode", choices=["retrieval", "full_context"],
+                   default="retrieval",help="M4 evidence selection mode",)
     return p
 
 
@@ -224,7 +227,8 @@ def _run_dry(args, records_path, out_dir: pathlib.Path, methods_list):
         verification_port=MockVerificationPort(),
         llm=MockLLMClient(model=args.model),
         top_k=5,
-        m4_top_k=5,
+        m4_top_k=args.m4_top_k,
+        m4_evidence_mode=args.m4_evidence_mode,
         m5_top_k_per_claim=5,
         query_include_question=args.query_include_question,
     )
@@ -347,7 +351,8 @@ def _run_real(args, records_path, out_dir: pathlib.Path, methods_list):
         verification_port=verification_port,
         llm=llm,
         top_k=5,
-        m4_top_k=5,
+        m4_top_k=args.m4_top_k,
+        m4_evidence_mode=args.m4_evidence_mode,
         m5_top_k_per_claim=5,
         query_include_question=args.query_include_question,
     )
@@ -517,8 +522,8 @@ def _write_outputs(out_dir: pathlib.Path, gold_lookup, args, n_dev_excluded: int
         "model": args.model,
         "split": split_label,
         "query_include_question": args.query_include_question,
-        "m4_top_k": 5,
-        "m5_top_k_per_claim": 5,
+        "m4_top_k": args.m4_top_k,
+        "m4_evidence_mode": args.m4_evidence_mode,
         "n_dev_excluded": n_dev_excluded,
         "run_timestamp": _now_tag(),
     }

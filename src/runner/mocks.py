@@ -231,6 +231,21 @@ class MockRetrievePort:
             ))
         return results
 
+    def full_context(self, context):
+        from contracts.schemas import Evidence
+
+        return [
+            Evidence(
+                doc_title=s.title,
+                sentence_id=s.sentence_id,
+                text=s.text,
+                score=0.0,
+                retrieval_query="FULL_CONTEXT",
+                rank=i,
+            )
+            for i, s in enumerate(context, start=1)
+        ]
+
 
 class MockClaimsPort:
     """Returns two canned atomic claims derived from the draft."""
