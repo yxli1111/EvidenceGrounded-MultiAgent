@@ -77,6 +77,9 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--min-key-remaining-usd", type=float, default=1.0,
                    dest="min_key_remaining_usd",
                    help="Abort if OpenRouter key balance drops below this amount (USD).")
+    p.add_argument("--m4-evidence", default="top5", choices=["top5", "top10", "full"],
+                   dest="m4_evidence",
+                   help="M4 evidence volume: top5 / top10 (dense retrieval) or full (all context).")
     return p
 
 
@@ -125,6 +128,8 @@ def main() -> None:
         print(f"[run_experiment] methods: {','.join(methods_list)}")
     if not args.report_only:
         print(f"[run_experiment] budget : ${args.max_cost_usd:.2f} USD")
+    if not args.report_only:
+        print(f"[run_experiment] m4_evid: {args.m4_evidence}")
     print()
 
     # --report-only: regenerate outputs from existing run dir, no API calls
@@ -227,6 +232,7 @@ def _run_dry(args, records_path, out_dir: pathlib.Path, methods_list):
         m4_top_k=5,
         m5_top_k_per_claim=5,
         query_include_question=args.query_include_question,
+        m4_evidence_mode=args.m4_evidence,
     )
 
     progress_fn = _make_progress_fn(len(examples))
@@ -350,6 +356,7 @@ def _run_real(args, records_path, out_dir: pathlib.Path, methods_list):
         m4_top_k=5,
         m5_top_k_per_claim=5,
         query_include_question=args.query_include_question,
+        m4_evidence_mode=args.m4_evidence,
     )
 
     progress_fn = _make_progress_fn(len(examples_to_run))
@@ -517,6 +524,7 @@ def _write_outputs(out_dir: pathlib.Path, gold_lookup, args, n_dev_excluded: int
         "model": args.model,
         "split": split_label,
         "query_include_question": args.query_include_question,
+        "m4_evidence_mode": getattr(args, "m4_evidence", "top5"),
         "m4_top_k": 5,
         "m5_top_k_per_claim": 5,
         "n_dev_excluded": n_dev_excluded,

@@ -18,6 +18,8 @@ Coverage
 
 import json
 import os
+import pathlib
+import shutil
 import tempfile
 
 import pytest
@@ -26,7 +28,9 @@ from src.runner.mocks import (
     MockClaimsPort,
     MockDraftPort,
     MockLLMClient,
+    MockQAInput,
     MockRetrievePort,
+    MockSentence,
     MockVerificationPort,
     make_synthetic_example,
     make_synthetic_gold,
@@ -922,3 +926,115 @@ class TestFatalErrorChain:
         example_ids = {r.example_id for r in records}
         assert "e_direct1" in example_ids
         assert "e_direct2" not in example_ids
+
+
+# ---------------------------------------------------------------------------
+# P2: M4 evidence-volume ablation modes
+# ---------------------------------------------------------------------------
+
+def _make_long_example(eid: str, n: int) -> MockQAInput:
+    """Synthetic QAInput with exactly n context sentences."""
+    return MockQAInput(
+        example_id=eid,
+        question=f"Question for {eid}?",
+        context=[MockSentence(f"Doc{i // 4}", i, f"Sentence {i} about topic.") for i in range(n)],
+        question_type="factoid",
+    )
+
+
+class TestM4EvidenceMode:
+    def test_top5_gives_5_evidence(self, ports, output_file):
+        example = _make_long_example("e_top5", 15)
+        runner = ExperimentRunner(**ports, top_k=3, m4_evidence_mode="top5")
+        runner.run([example], output_file, methods=["M4"])
+        m4 = next(r for r in load_records(output_file) if r.method_id == "M4")
+        assert m4.status == "ok"
+        ev_list = list(m4.evidence.values())[0]
+        assert len(ev_list) == 5
+
+    def test_top10_gives_10_evidence(self, ports, output_file):
+        example = _make_long_example("e_top10", 15)
+        runner = ExperimentRunner(**ports, top_k=3, m4_evidence_mode="top10")
+        runner.run([example], output_file, methods=["M4"])
+        m4 = next(r for r in load_records(output_file) if r.method_id == "M4")
+        assert m4.status == "ok"
+        ev_list = list(m4.evidence.values())[0]
+        assert len(ev_list) == 10
+
+    def test_full_gives_all_context_sentences(self, ports, output_file):
+        n = 7
+        example = _make_long_example("e_full", n)
+        runner = ExperimentRunner(**ports, top_k=3, m4_evidence_mode="full")
+        runner.run([example], output_file, methods=["M4"])
+        m4 = next(r for r in load_records(output_file) if r.method_id == "M4")
+        assert m4.status == "ok"
+        ev_list = list(m4.evidence.values())[0]
+        assert len(ev_list) == n
+
+    def test_full_evidence_has_zero_score_and_full_context_query(self, ports, output_file):
+        example = _make_long_example("e_full_score", 4)
+        runner = ExperimentRunner(**ports, top_k=3, m4_evidence_mode="full")
+        runner.run([example], output_file, methods=["M4"])
+        m4 = next(r for r in load_records(output_file) if r.method_id == "M4")
+        ev_list = list(m4.evidence.values())[0]
+        for ev in ev_list:
+            assert float(ev["score"]) == 0.0
+            assert ev["retrieval_query"] == "FULL_CONTEXT"
+
+    def test_m4_evidence_mode_stored_in_model_config(self, ports, output_file):
+        for mode in ["top5", "top10", "full"]:
+            with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as fh:
+                path = fh.name
+            try:
+                runner = ExperimentRunner(**ports, top_k=5, m4_evidence_mode=mode)
+                runner.run([make_synthetic_example(f"e_meta_{mode}")], path, methods=["M4"])
+                m4 = next(r for r in load_records(path) if r.method_id == "M4")
+                retrieval = (m4.model_config or {}).get("_retrieval", {})
+                assert retrieval.get("m4_evidence_mode") == mode, (
+                    f"mode={mode}: got {retrieval.get('m4_evidence_mode')}"
+                )
+            finally:
+                os.unlink(path)
+
+    def test_m5_unaffected_by_m4_evidence_mode(self, ports, output_file):
+        """M5 retrieves exactly top_k=3 per claim regardless of m4_evidence_mode."""
+        example = _make_long_example("e_m5_unaffected", 15)
+        runner = ExperimentRunner(**ports, top_k=3, m4_evidence_mode="full")
+        runner.run([example], output_file, methods=["M5"])
+        m5 = next(r for r in load_records(output_file) if r.method_id == "M5")
+        assert m5.status == "ok"
+        for ev_list in m5.evidence.values():
+            assert len(ev_list) == 3, f"M5 claim got {len(ev_list)} evidence, expected 3"
+
+    def test_reuse_drafts_no_regeneration(self, ports, output_file, tmp_path):
+        """Drafts from a top5 run are reused transparently by a top10 run."""
+        from src.runner.records import drafts_path
+
+        example = make_synthetic_example("e_reuse_m4")
+
+        # First run: top5, generates drafts
+        runner1 = ExperimentRunner(**ports, top_k=3, m4_evidence_mode="top5")
+        runner1.run([example], output_file, methods=["M1", "M4"])
+
+        # Copy drafts.jsonl to a new output dir (must differ from output_file's dir)
+        run2_dir = tmp_path / "run2"
+        run2_dir.mkdir()
+        output_file2 = str(run2_dir / "out2.jsonl")
+        shutil.copy(drafts_path(output_file), drafts_path(output_file2))
+
+        # Second run: top10, counting draft calls
+        class CountingDraftPort(MockDraftPort):
+            draft_calls = 0
+            def generate_draft(self, ex, llm):
+                CountingDraftPort.draft_calls += 1
+                return super().generate_draft(ex, llm)
+
+        CountingDraftPort.draft_calls = 0
+        ports2 = dict(ports)
+        ports2["draft_port"] = CountingDraftPort()
+        runner2 = ExperimentRunner(**ports2, top_k=3, m4_evidence_mode="top10")
+        runner2.run([example], output_file2, methods=["M4"])
+
+        assert CountingDraftPort.draft_calls == 0, (
+            "generate_draft must not be called when draft cache is pre-populated"
+        )

@@ -189,11 +189,18 @@ class ExperimentRunner:
         llm: C's LLMClient (injected into every port call).
         top_k: default evidence sentences per retrieval call (M4 and M5 fallback).
         m4_top_k: evidence sentences for M4 (overrides top_k; None = use top_k).
+            Ignored when m4_evidence_mode is "top5", "top10", or "full".
         m5_top_k_per_claim: evidence sentences per claim in M5 (None = use top_k).
         m5_total_evidence_budget: total evidence slots across all M5 claims;
             distributed round-robin.  None = no limit.
         query_include_question: if True, prepend question + "\\n" to M4/M5 queries.
             Default True (matches CLI default).
+        m4_evidence_mode: M4 evidence volume strategy for ablation studies.
+            "top5"  — retrieve top-5 sentences (dense ranking).
+            "top10" — retrieve top-10 sentences (dense ranking).
+            "full"  — return all context sentences via retrieve_port.full_context()
+                      (no ranking, score=0).
+            None (default) — legacy behaviour: use m4_top_k / top_k.
     """
 
     def __init__(
@@ -208,6 +215,7 @@ class ExperimentRunner:
         m5_top_k_per_claim: int | None = None,
         m5_total_evidence_budget: int | None = None,
         query_include_question: bool = True,
+        m4_evidence_mode: str | None = None,
     ) -> None:
         self.draft_port = draft_port
         self.retrieve_port = retrieve_port
@@ -219,6 +227,7 @@ class ExperimentRunner:
         self.m5_top_k_per_claim = m5_top_k_per_claim
         self.m5_total_evidence_budget = m5_total_evidence_budget
         self.query_include_question = query_include_question
+        self.m4_evidence_mode = m4_evidence_mode
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -276,8 +285,18 @@ class ExperimentRunner:
 
         # Merge retrieval params into a copy of model_settings for full traceability.
         effective_ms: dict = dict(model_settings) if model_settings else {}
+        _m4_top_k_effective: int | None
+        if self.m4_evidence_mode == "top10":
+            _m4_top_k_effective = 10
+        elif self.m4_evidence_mode == "top5":
+            _m4_top_k_effective = 5
+        elif self.m4_evidence_mode == "full":
+            _m4_top_k_effective = None
+        else:
+            _m4_top_k_effective = self.m4_top_k if self.m4_top_k is not None else self.top_k
         effective_ms["_retrieval"] = {
-            "m4_top_k": self.m4_top_k if self.m4_top_k is not None else self.top_k,
+            "m4_evidence_mode": self.m4_evidence_mode,
+            "m4_top_k": _m4_top_k_effective,
             "m5_top_k_per_claim": self.m5_top_k_per_claim if self.m5_top_k_per_claim is not None else self.top_k,
             "m5_total_evidence_budget": self.m5_total_evidence_budget,
             "query_include_question": self.query_include_question,
@@ -519,14 +538,22 @@ class ExperimentRunner:
     def _run_m4(
         self, example: Any, draft: Any, model_config: dict | None, effective_llm: Any
     ) -> ExperimentRecord:
-        effective_k = self.m4_top_k if self.m4_top_k is not None else self.top_k
         question = _attr(example, "question", "")
         explanation = _attr(draft, "explanation") or ""
         if isinstance(draft, dict):
             explanation = draft.get("explanation", "")
         query = (question + "\n" + explanation) if self.query_include_question and question else explanation
         context = _attr(example, "context")
-        evidence = self.retrieve_port.retrieve(query, context, effective_k)
+        if self.m4_evidence_mode == "full":
+            evidence = self.retrieve_port.full_context(context)
+        elif self.m4_evidence_mode == "top10":
+            evidence = self.retrieve_port.retrieve(query, context, 10)
+        elif self.m4_evidence_mode == "top5":
+            evidence = self.retrieve_port.retrieve(query, context, 5)
+        else:
+            # Backward-compat path: mode not set, use legacy m4_top_k / top_k.
+            effective_k = self.m4_top_k if self.m4_top_k is not None else self.top_k
+            evidence = self.retrieve_port.retrieve(query, context, effective_k)
         feedback = self.verification_port.verify_draft(example, draft, evidence, effective_llm)
         revision = self.verification_port.revise_answer(example, draft, feedback, effective_llm)
         usage = self._drain_usage(effective_llm)

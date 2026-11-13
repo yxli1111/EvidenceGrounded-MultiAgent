@@ -231,6 +231,25 @@ class MockRetrievePort:
             ))
         return results
 
+    def full_context(self, context: Any) -> list[MockEvidence]:
+        """Return every context sentence as evidence without ranking."""
+        sentences = list(context)
+        results = []
+        for rank, sent in enumerate(sentences, start=1):
+            if isinstance(sent, dict):
+                title, sid, text = sent["title"], sent["sentence_id"], sent["text"]
+            else:
+                title, sid, text = sent.title, sent.sentence_id, sent.text
+            results.append(MockEvidence(
+                doc_title=title,
+                sentence_id=sid,
+                text=text,
+                score=0.0,
+                retrieval_query="FULL_CONTEXT",
+                rank=rank,
+            ))
+        return results
+
 
 class MockClaimsPort:
     """Returns two canned atomic claims derived from the draft."""
