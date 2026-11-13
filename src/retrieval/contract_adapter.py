@@ -46,3 +46,21 @@ class ContractEvidenceRetriever:
             Evidence(**result)
             for result in internal_results
         ]
+
+    def full_context(
+        self,
+        context: list[Sentence],
+    ) -> list[Evidence]:
+        """Return all context sentences as Evidence without ranking."""
+
+        return [
+            Evidence(
+                doc_title=sentence.title,
+                sentence_id=sentence.sentence_id,
+                text=sentence.text,
+                score=0.0,
+                retrieval_query="FULL_CONTEXT",
+                rank=i,
+            )
+            for i, sentence in enumerate(context, start=1)
+        ]
