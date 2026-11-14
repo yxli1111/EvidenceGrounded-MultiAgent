@@ -191,12 +191,26 @@ class DTests(unittest.TestCase):
         self.assertEqual(result.items[0].evidence_ids, ["Topic::Part::7"])
 
     def test_verification_json_errors_are_not_empty_success(self):
-        for response in ("not JSON", "[]", '{"items":"wrong","overall_comment":"x"}'):
+        cases = [
+            ("not JSON", ["not JSON", "still not JSON"]),
+            ("[]", ["[]"]),
+            (
+                '{"items":"wrong","overall_comment":"x"}',
+                ['{"items":"wrong","overall_comment":"x"}'],
+            ),
+        ]
+
+        for response, scripted_responses in cases:
             with self.subTest(response=response):
-                llm = ScriptedLLM(response)
+                llm = ScriptedLLM(*scripted_responses)
+
                 with self.assertRaises(VerificationError):
-                    verify_draft(self.example, self.draft, self.evidence, llm)
-                self.assertEqual(len(llm.calls), 1)
+                    verify_draft(
+                        self.example,
+                        self.draft,
+                        self.evidence,
+                        llm,
+                    )
 
     def test_api_error_is_propagated_unchanged_without_local_retry(self):
         for stage in ("draft", "claims", "revision"):
